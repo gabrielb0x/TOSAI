@@ -1,0 +1,19 @@
+# Node
+node_modules
+npm-debug.log*
+dist
+.vite
+
+# Go
+/backend/bin
+/backend/tmp
+**/*.log
+
+# Env
+.env
+.env.local
+
+# Editor
+.DS_Store
+.vscode
+.idea
