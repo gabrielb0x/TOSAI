@@ -1,6 +1,6 @@
 module github.com/auto-tos/auto-tos
 
-go 1.24.3
+go 1.23.0
 
 require (
 	github.com/gin-contrib/cors v1.7.6
