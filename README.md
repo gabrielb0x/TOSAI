@@ -31,6 +31,10 @@ Auto-ToS is an AI-powered Terms-of-Service summarizer that delivers quick, diges
 ### Backend
 ```bash
 cd backend
+cp config/.env.example .env
+# optional: initialize Postgres locally (requires superuser):
+# psql -f config/database_init.sql
+
 PORT=8080 go run ./cmd/server
 ```
 
@@ -40,6 +44,11 @@ cd frontend
 npm install
 npm run dev -- --host --port 5173
 ```
+
+## Quick API test page
+When the backend is running, open http://localhost:8080/web/test.html to verify
+the health and summary endpoints directly from the browser. This works whether
+you run the stack via Docker or with local binaries.
 
 ## Next steps
 - Add database migrations and models.
