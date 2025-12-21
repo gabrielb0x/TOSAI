@@ -5,13 +5,21 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/auto-tos/auto-tos/internal/config"
 )
 
 // New sets up the Gin engine with routes and middleware.
-func New(cfg config.Config) *gin.Engine {
+func New(cfg config.Config, pool *pgxpool.Pool) *gin.Engine {
 	r := gin.Default()
+
+	r.Use(func(c *gin.Context) {
+		if pool != nil {
+			c.Set("db", pool)
+		}
+		c.Next()
+	})
 
 	corsCfg := cors.DefaultConfig()
 	if cfg.AllowedOrigins == "*" {
@@ -36,6 +44,8 @@ func New(cfg config.Config) *gin.Engine {
 			})
 		})
 	}
+
+	registerStatic(r)
 
 	return r
 }
