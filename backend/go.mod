@@ -1,4 +1,4 @@
-module github.com/auto-tos/auto-tos
+module github.com/gabrielb0x/TOSAI/backend
 
 go 1.24.3
 
