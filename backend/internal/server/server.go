@@ -3,11 +3,13 @@ package server
 import (
 	"net/http"
 
+	"strings"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/auto-tos/auto-tos/internal/config"
+	"github.com/gabrielb0x/TOSAI/backend/internal/config"
 )
 
 // New sets up the Gin engine with routes and middleware.
@@ -22,12 +24,16 @@ func New(cfg config.Config, pool *pgxpool.Pool) *gin.Engine {
 	})
 
 	corsCfg := cors.DefaultConfig()
-	if cfg.AllowedOrigins == "*" {
+	if cfg.AllowAllOrigins {
 		corsCfg.AllowAllOrigins = true
 	} else {
-		corsCfg.AllowOrigins = []string{cfg.AllowedOrigins}
+		corsCfg.AllowOrigins = cfg.CORSOrigins
 	}
 	corsCfg.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization"}
+	corsCfg.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
+	corsCfg.AllowPrivateNetwork = true
+	corsCfg.ExposeHeaders = []string{"Content-Length"}
+	corsCfg.AllowOrigins = trimEmpty(corsCfg.AllowOrigins)
 	r.Use(cors.New(corsCfg))
 
 	r.GET("/healthz", func(c *gin.Context) {
@@ -48,4 +54,18 @@ func New(cfg config.Config, pool *pgxpool.Pool) *gin.Engine {
 	registerStatic(r)
 
 	return r
+}
+
+func trimEmpty(values []string) []string {
+	cleaned := make([]string, 0, len(values))
+	for _, v := range values {
+		if strings.TrimSpace(v) == "" {
+			continue
+		}
+		cleaned = append(cleaned, v)
+	}
+	if len(cleaned) == 0 {
+		return []string{"*"}
+	}
+	return cleaned
 }
