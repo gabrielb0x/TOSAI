@@ -30,13 +30,11 @@ TOSAI récupère les CGU/ToS d’un site, les résume automatiquement (OpenAI), 
 ## Stack technique
 - **Backend** : Go (Gin, pgx), chargement .env prioritaire `backend/.env`, port HTTP par défaut **9000**.
 - **Base** : PostgreSQL 15+ (UUID + JSONB), migrations idempotentes intégrées (lecture de `backend/config/database_init.sql`).
-- **Frontend** : React + Vite + TypeScript + Tailwind.
-- **Infra** : Docker Compose de dev, reverse proxy recommandé via NGINX.
+- **Frontend** : Vite + HTML/CSS/JS (vanilla).
 
 ## Arborescence
 - `backend/` : API Go, migrations intégrées, fichiers `.env`.
-- `frontend/` : client Vite/React/TS.
-- `infra/` : docker-compose pour dev local.
+- `frontend/` : client Vite en HTML/CSS/JS.
 - `PLAN.md` : feuille de route.
 
 ## Démarrage rapide (local)
@@ -82,7 +80,7 @@ APP_PORT=9000 go run ./cmd/server
 - Le serveur logge la connexion DB, applique les migrations (`database_init.sql`) et démarre sur le port configuré.
 - Variables supportées : voir [Variables d’environnement](#variables-denvironnement).
 
-## Lancer le frontend React
+## Lancer le frontend Vite (HTML/CSS/JS)
 ```bash
 cd frontend
 npm install
@@ -140,7 +138,6 @@ cd backend
 go test ./...
 
 cd ../frontend
-npm run lint
 npm run build
 ```
 

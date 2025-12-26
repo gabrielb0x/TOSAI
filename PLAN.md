@@ -1,8 +1,8 @@
 # Plan
 
 ## Step 1 – Scaffold
-- Create repository structure with backend (Go + Gin skeleton), frontend (Vite + React + TypeScript + Tailwind), and infra (Docker Compose).
-- Add README and environment examples; ensure Docker Compose boots PostgreSQL and backend (health check).
+- Create repository structure with backend (Go + Gin skeleton) and frontend (Vite + HTML/CSS/JS).
+- Add README and environment examples; document how to run PostgreSQL and backend (health check).
 
 ## Step 2 – Database & migrations
 - Configure PostgreSQL connection via environment variables.

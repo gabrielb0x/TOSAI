@@ -1,13 +1,82 @@
 <!doctype html>
-<html lang="en">
+<html lang="fr">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
+    <title>TOSAI — Analyse simple</title>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <div id="app" class="app">
+      <header class="hero">
+        <p class="eyebrow">TOSAI</p>
+        <h1>Analyse rapide des CGU/ToS</h1>
+        <p class="subtitle">
+          Interface minimale en HTML/CSS/JS pour tester l'API. Modifiez facilement les
+          paramètres dans <code>src/main.js</code>.
+        </p>
+      </header>
+
+      <main class="main">
+        <section class="card">
+          <h2>Analyser une URL</h2>
+          <form id="analyze-form" class="form">
+            <label for="tos-url">URL des conditions</label>
+            <input
+              id="tos-url"
+              name="tos-url"
+              type="url"
+              placeholder="https://example.com/terms"
+              required
+            />
+            <button type="submit">Lancer l'analyse</button>
+            <p class="helper">L'API répondra même si l'analyse n'est pas encore implémentée.</p>
+          </form>
+        </section>
+
+        <section class="card">
+          <h2>État de la requête</h2>
+          <div class="status-grid">
+            <div>
+              <span class="label">Statut</span>
+              <p id="status-text" class="status">Prêt</p>
+            </div>
+            <div>
+              <span class="label">Code HTTP</span>
+              <p id="status-code" class="status">—</p>
+            </div>
+            <div>
+              <span class="label">Dernière mise à jour</span>
+              <p id="status-time" class="status">—</p>
+            </div>
+          </div>
+          <div class="chip-row">
+            <span class="chip">API: <strong id="api-base">—</strong></span>
+            <span class="chip">Endpoint: <strong id="api-endpoint">—</strong></span>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>Résumé & notation</h2>
+          <div class="summary">
+            <div>
+              <span class="label">Note</span>
+              <p id="rating" class="rating">—</p>
+            </div>
+            <div>
+              <span class="label">Résumé</span>
+              <p id="summary-text" class="summary-text">Aucun résumé pour le moment.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>Réponse brute</h2>
+          <pre id="raw-response" class="raw">En attente...</pre>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
   </body>
 </html>
