@@ -12,17 +12,18 @@
 - [Démarrage rapide (local)](#démarrage-rapide-local)
 - [Configuration PostgreSQL](#configuration-postgresql)
 - [Lancer le backend Go](#lancer-le-backend-go)
-- [Lancer le frontend React](#lancer-le-frontend-react)
+- [Lancer le frontend Vite](#lancer-le-frontend-vite-htmlcssjs)
 - [Déploiement Raspberry Pi 5 + NGINX](#déploiement-raspberry-pi-5--nginx)
 - [Variables d’environnement](#variables-denvironnement)
 - [Tests](#tests)
 
 ## Présentation
-TOSAI récupère les CGU/ToS d’un site, les résume automatiquement (OpenAI), attribue une note A→E, stocke le résultat (texte + JSON) et applique des quotas par domaine. Un bouton de signalement et un panneau admin (protégé par token serveur) complètent l’expérience.
+TOSAI récupère les CGU/ToS d’un site, extrait le texte, interroge OpenAI puis renvoie un JSON d’analyse (note A→E, résumé, points clés, risques, recommandation). Le frontend Vite consomme directement cette API.
 
 ## Fonctionnalités clés
-- Récupération des CGU/ToS par URL et stockage versionné (sha256).
-- Résumés IA + notation A→E, avec métadonnées et coûts token.
+- Endpoint `/api/v1/summary` (`GET` ou `POST`) branché sur OpenAI.
+- Extraction de texte HTML/plain text avant analyse IA.
+- Résumé IA + notation A→E + points clés + risques + recommandation.
 - Quotas journaliers par domaine (table limites + usage quotidien).
 - Bouton de signalement et audit admin (optionnel).
 - Panel admin sans comptes publics (protégé par un token côté backend).
@@ -42,16 +43,24 @@ TOSAI récupère les CGU/ToS d’un site, les résume automatiquement (OpenAI), 
 # 1) Cloner & se placer sur la racine
 cd TOSAI
 
-# 2) Préparer l'environnement backend
-touch backend/.env
-cp backend/.env.example backend/.env
+# Option A (rapide): préparer l'environnement automatiquement
+make setup
 
-# 3) Installer les dépendances frontend
-cd frontend
+# Option B (manuel): préparer l'environnement
+cp backend/.env.example backend/.env
+# renseigner OPENAI_API_KEY dans backend/.env
+
+# 2) Démarrer le backend (terminal 1)
+cd backend
+go run ./cmd/server
+
+# 3) Démarrer le frontend (terminal 2)
+cd ../frontend
 npm install
 npm run dev -- --host --port 5173
 ```
-- L’API écoute sur http://localhost:9000 (proxy facile avec NGINX).
+- L'API écoute sur http://localhost:9000.
+- Le frontend est sur http://localhost:5173 et proxy automatiquement `/api` vers `:9000`.
 - La page de test API : http://localhost:9000/web/test.html
 
 ## Configuration PostgreSQL
@@ -77,7 +86,9 @@ cd backend
 cp .env.example .env  # ou utilisez backend/config/.env si besoin
 APP_PORT=9000 go run ./cmd/server
 ```
-- Le serveur logge la connexion DB, applique les migrations (`database_init.sql`) et démarre sur le port configuré.
+- `OPENAI_API_KEY` est requis pour utiliser `/api/v1/summary`.
+- `DATABASE_URL` est optionnel (mode API-only possible pour dev rapide).
+- Si `DATABASE_URL` est fourni, le backend tente connexion + migration (`database_init.sql`).
 - Variables supportées : voir [Variables d’environnement](#variables-denvironnement).
 
 ## Lancer le frontend Vite (HTML/CSS/JS)
@@ -88,7 +99,8 @@ npm run dev -- --host --port 5173
 # ou build production
 npm run build
 ```
-Configurez `VITE_API_BASE_URL` selon votre proxy (par défaut http://localhost:9000).
+- En local, aucune variable front n'est obligatoire (proxy Vite actif).
+- Optionnel: `VITE_API_BASE_URL` pour forcer une base API externe.
 
 ## Déploiement Raspberry Pi 5 + NGINX
 - OS recommandé : Raspberry Pi OS/Debian 12 (arm64). Go et Node fonctionnent nativement.
@@ -99,38 +111,22 @@ Configurez `VITE_API_BASE_URL` selon votre proxy (par défaut http://localhost:9
   APP_ENV=prod APP_PORT=9000 DATABASE_URL=postgres://tosai_app:motdepasse@127.0.0.1:5432/tosai?sslmode=disable \
     /usr/local/bin/go run ./cmd/server
   ```
-- Exemple de bloc NGINX (reverse proxy) :
-  ```nginx
-  server {
-    listen 80;
-    server_name tosai.fr;
-
-    location / {
-      root /var/www/tosai;
-      try_files $uri $uri/ /index.html;
-    }
-
-    location /api/ {
-      proxy_pass http://127.0.0.1:9000;
-      proxy_set_header Host $host;
-      proxy_set_header X-Real-IP $remote_addr;
-    }
-
-    location /healthz {
-      proxy_pass http://127.0.0.1:9000/healthz;
-    }
-  }
-  ```
+- Exemple complet NGINX : `nginx.example.conf` à la racine du repo.
 - Pensez à ouvrir le port 9000 localement uniquement (NGINX fait l’externalisation).
 
 ## Variables d’environnement
 Fichier prioritaire : `backend/.env` (puis `backend/config/.env`).
 - `APP_ENV` : `local` | `prod`
 - `APP_PORT` : port HTTP (défaut `9000`)
-- `DATABASE_URL` : ex. `postgres://tosai_app:motdepasse@127.0.0.1:5432/tosai?sslmode=disable`
+- `DATABASE_URL` : optionnel, ex. `postgres://tosai_app:motdepasse@127.0.0.1:5432/tosai?sslmode=disable`
 - `CORS_ORIGINS` : liste d’origines séparées par des virgules ou `*`
 - `ADMIN_API_TOKEN` : token serveur pour sécuriser les endpoints admin
-- `OPENAI_API_KEY` : clé pour les futurs appels de génération
+- `OPENAI_API_KEY` : clé requise pour l'analyse OpenAI
+- `OPENAI_MODEL` : modèle OpenAI (défaut `gpt-4.1-mini`)
+- `OPENAI_BASE_URL` : base URL API OpenAI (défaut `https://api.openai.com/v1`)
+- `HTTP_TIMEOUT_SECONDS` : timeout HTTP global (défaut `25`)
+- `ANALYSIS_INPUT_MAX_CHARS` : taille max du texte envoyé à OpenAI (défaut `12000`)
+- `VITE_BACKEND_PROXY_TARGET` (frontend/dev) : cible proxy Vite (défaut `http://localhost:9000`)
 
 ## Tests
 ```bash

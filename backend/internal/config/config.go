@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/joho/godotenv"
@@ -16,9 +17,13 @@ type Config struct {
 	Port            string
 	DatabaseURL     string
 	OpenAIAPIKey    string
+	OpenAIModel     string
+	OpenAIBaseURL   string
 	AdminAPIToken   string
 	CORSOrigins     []string
 	AllowAllOrigins bool
+	HTTPTimeoutSec  int
+	AnalysisMaxChar int
 }
 
 // Load reads environment variables into a Config struct.
@@ -33,13 +38,21 @@ func Load() Config {
 		Port:            getenvDefault("APP_PORT", getenvDefault("PORT", "9000")),
 		DatabaseURL:     os.Getenv("DATABASE_URL"),
 		OpenAIAPIKey:    os.Getenv("OPENAI_API_KEY"),
+		OpenAIModel:     getenvDefault("OPENAI_MODEL", "gpt-4.1-mini"),
+		OpenAIBaseURL:   strings.TrimRight(getenvDefault("OPENAI_BASE_URL", "https://api.openai.com/v1"), "/"),
 		AdminAPIToken:   os.Getenv("ADMIN_API_TOKEN"),
 		CORSOrigins:     corsOrigins,
 		AllowAllOrigins: len(corsOrigins) == 1 && corsOrigins[0] == "*",
+		HTTPTimeoutSec:  getenvIntDefault("HTTP_TIMEOUT_SECONDS", 25),
+		AnalysisMaxChar: getenvIntDefault("ANALYSIS_INPUT_MAX_CHARS", 12000),
 	}
 
 	if cfg.DatabaseURL == "" {
-		log.Println("avertissement: DATABASE_URL n'est pas défini ; la connexion PostgreSQL échouera tant qu'il ne sera pas fourni")
+		log.Println("avertissement: DATABASE_URL n'est pas défini ; backend lancé en mode API-only (sans persistance PostgreSQL)")
+	}
+
+	if cfg.OpenAIAPIKey == "" {
+		log.Println("avertissement: OPENAI_API_KEY n'est pas défini ; l'endpoint /api/v1/summary renverra une erreur")
 	}
 
 	return cfg
@@ -107,6 +120,19 @@ func getenvDefault(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func getenvIntDefault(key string, fallback int) int {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return fallback
+	}
+	parsed, err := strconv.Atoi(value)
+	if err != nil || parsed <= 0 {
+		log.Printf("avertissement: %s invalide (%q), fallback=%d", key, value, fallback)
+		return fallback
+	}
+	return parsed
 }
 
 func parseOrigins(raw string) []string {

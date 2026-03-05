@@ -15,6 +15,7 @@ import (
 // New sets up the Gin engine with routes and middleware.
 func New(cfg config.Config, pool *pgxpool.Pool) *gin.Engine {
 	r := gin.Default()
+	analysisSvc := newAnalysisService(cfg)
 
 	r.Use(func(c *gin.Context) {
 		if pool != nil {
@@ -44,11 +45,8 @@ func New(cfg config.Config, pool *pgxpool.Pool) *gin.Engine {
 
 	api := r.Group("/api/v1")
 	{
-		api.GET("/summary", func(c *gin.Context) {
-			c.JSON(http.StatusNotImplemented, gin.H{
-				"message": "summary endpoint will be implemented in later steps",
-			})
-		})
+		api.GET("/summary", analysisSvc.handleSummaryGET)
+		api.POST("/summary", analysisSvc.handleSummaryPOST)
 	}
 
 	registerStatic(r)

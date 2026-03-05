@@ -7,16 +7,22 @@ import (
 	"github.com/gabrielb0x/TOSAI/backend/internal/config"
 	"github.com/gabrielb0x/TOSAI/backend/internal/db"
 	"github.com/gabrielb0x/TOSAI/backend/internal/server"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func main() {
 	cfg := config.Load()
 
-	pool, err := db.ConnectAndMigrate(cfg.DatabaseURL)
-	if err != nil {
-		log.Fatalf("initialisation base TOSAI échouée: %v", err)
+	var pool *pgxpool.Pool
+	if cfg.DatabaseURL != "" {
+		connectedPool, err := db.ConnectAndMigrate(cfg.DatabaseURL)
+		if err != nil {
+			log.Printf("avertissement: initialisation PostgreSQL échouée (%v) ; démarrage sans DB", err)
+		} else {
+			pool = connectedPool
+			defer connectedPool.Close()
+		}
 	}
-	defer pool.Close()
 
 	r := server.New(cfg, pool)
 
