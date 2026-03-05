@@ -64,6 +64,6 @@ func trimEmpty(values []string) []string {
 	}
 	if len(cleaned) == 0 {
 		return []string{"*"}
-	}
+	}s
 	return cleaned
 }
