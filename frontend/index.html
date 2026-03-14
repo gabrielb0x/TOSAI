@@ -2,98 +2,15 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TOSAI - Radar CGU</title>
+    <meta
+      name="description"
+      content="TOSAI analyse les CGU avec l'IA: note, resume, risques et recommendation en quelques secondes."
+    />
+    <title>TOSAI - Analyse intelligente des CGU</title>
   </head>
   <body>
-    <div class="noise"></div>
-    <div class="aurora aurora-a"></div>
-    <div class="aurora aurora-b"></div>
-
-    <div id="app" class="app">
-      <header class="hero">
-        <p class="hero-kicker">TOSAI / Vite</p>
-        <h1>Analyse IA de CGU en quelques secondes</h1>
-        <p class="hero-subtitle">
-          Collez une URL de conditions d'utilisation, le backend extrait le texte puis interroge
-          OpenAI pour renvoyer une note, un résumé et les principaux risques.
-        </p>
-
-        <form id="analyze-form" class="analyze-form">
-          <label for="tos-url">URL à analyser</label>
-          <div class="field-row">
-            <input
-              id="tos-url"
-              name="tos-url"
-              type="url"
-              placeholder="https://example.com/terms"
-              required
-            />
-            <button type="submit">Analyser</button>
-          </div>
-          <p class="hint">
-            Backend: <strong id="api-base">-</strong> | Endpoint: <code id="api-endpoint">-</code>
-          </p>
-        </form>
-      </header>
-
-      <main class="dashboard">
-        <section class="panel">
-          <h2>Etat de la requete</h2>
-          <div class="status-grid">
-            <article class="status-item">
-              <span class="label">Statut</span>
-              <p id="status-text" class="status-value">Pret</p>
-            </article>
-            <article class="status-item">
-              <span class="label">HTTP</span>
-              <p id="status-code" class="status-value">-</p>
-            </article>
-            <article class="status-item">
-              <span class="label">Maj</span>
-              <p id="status-time" class="status-value">-</p>
-            </article>
-            <article class="status-item">
-              <span class="label">Confiance</span>
-              <p id="confidence" class="status-value">-</p>
-            </article>
-          </div>
-        </section>
-
-        <section class="panel">
-          <div class="summary-head">
-            <div>
-              <span class="label">Note globale</span>
-              <p id="rating" class="rating" data-rating="X">-</p>
-            </div>
-          </div>
-          <p id="summary-text" class="summary-text">Aucun resume pour le moment.</p>
-          <p id="recommendation" class="recommendation">Recommandation en attente.</p>
-        </section>
-
-        <section class="panel split-panel">
-          <article>
-            <h3>Points cles</h3>
-            <ul id="highlights-list" class="bullet-list">
-              <li>En attente d'analyse.</li>
-            </ul>
-          </article>
-          <article>
-            <h3>Risques detectes</h3>
-            <ul id="risks-list" class="bullet-list">
-              <li>En attente d'analyse.</li>
-            </ul>
-          </article>
-        </section>
-
-        <section class="panel">
-          <h2>Reponse brute</h2>
-          <pre id="raw-response" class="raw">En attente...</pre>
-        </section>
-      </main>
-    </div>
-
+    <div id="app"></div>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

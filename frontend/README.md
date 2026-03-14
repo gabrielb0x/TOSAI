@@ -1,22 +1,38 @@
-# Vite + HTML/CSS/JS (vanilla)
+# 🎨 Frontend TOSAI (Vite vanilla)
 
-Ce frontend utilise Vite avec du HTML, du CSS et du JavaScript pur (sans React/TypeScript).
+Frontend moderne en **HTML/CSS/JS pur** avec:
+- **`/`**: page de presentation
+- **`/tosai`**: page outil d'analyse
 
-## Démarrer
+## 🚀 Lancer en dev
 
 ```bash
 npm install
 npm run dev -- --host --port 5173
 ```
 
-Par défaut, Vite proxy `/api` et `/healthz` vers `http://localhost:9000`, donc aucune variable front n'est requise en local.
+- URL locale: `http://localhost:5173`
+- Proxy API actif en dev sur `/api` et `/healthz` vers `http://localhost:9000`
 
-## Variables optionnelles
+## ⚙️ Variables optionnelles
 
-- `VITE_API_BASE_URL` : base API explicite (ex: `https://api.tosai.fr`).
-- `VITE_BACKEND_PROXY_TARGET` : cible du proxy Vite en dev (défaut `http://localhost:9000`).
+- `VITE_API_BASE_URL` -> base API explicite (ex: `https://api.tosai.fr`)
+- `VITE_BACKEND_PROXY_TARGET` -> cible proxy Vite (defaut `http://localhost:9000`)
+- `VITE_MASK_BUILD_FILENAMES` -> `true` pour masquer les noms en build
 
-## Paramètres faciles
+Exemple:
 
-Les paramètres clés sont regroupés dans `src/main.js` (objet `CONFIG`) pour pouvoir
-changer rapidement l'URL de l'API, l'endpoint ou le timeout.
+```bash
+VITE_MASK_BUILD_FILENAMES=true npm run build
+```
+
+- `false` (defaut): `assets/index-abc123.css`
+- `true`: `assets/abc123.css`
+
+## 🧩 Build production
+
+```bash
+npm run build
+```
+
+Le build statique est genere dans `frontend/dist/`.

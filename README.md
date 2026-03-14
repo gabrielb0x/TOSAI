@@ -1,140 +1,235 @@
-# TOSAI
+# 🚀 TOSAI
 
-![License](https://img.shields.io/github/license/gabrielb0x/TOSAI) ![Go](https://img.shields.io/badge/Go-1.22%2B-00ADD8?logo=go) ![Stars](https://img.shields.io/github/stars/gabrielb0x/TOSAI?style=social)
+**TOSAI** est une plateforme pour **analyser des CGU/ToS avec l'IA** et obtenir rapidement:
+- **une note globale (A→E)**
+- **un resume clair**
+- **les points cles**
+- **les risques detectes**
+- **une recommendation actionnable**
 
-> Plateforme francophone pour analyser et résumer les CGU/ToS : collecte par URL, résumé IA, notation A→E, quotas par domaine et signalements.
+Le frontend est maintenant organise en 2 pages:
+- **`/`**: page de presentation premium (style vitrine moderne)
+- **`/tosai`**: page outil pour lancer les analyses
 
-## Sommaire
-- [Présentation](#présentation)
-- [Fonctionnalités clés](#fonctionnalités-clés)
-- [Stack technique](#stack-technique)
-- [Arborescence](#arborescence)
-- [Démarrage rapide (local)](#démarrage-rapide-local)
-- [Configuration PostgreSQL](#configuration-postgresql)
-- [Lancer le backend Go](#lancer-le-backend-go)
-- [Lancer le frontend Vite](#lancer-le-frontend-vite-htmlcssjs)
-- [Déploiement Raspberry Pi 5 + NGINX](#déploiement-raspberry-pi-5--nginx)
-- [Variables d’environnement](#variables-denvironnement)
-- [Tests](#tests)
+---
 
-## Présentation
-TOSAI récupère les CGU/ToS d’un site, extrait le texte, interroge OpenAI puis renvoie un JSON d’analyse (note A→E, résumé, points clés, risques, recommandation). Le frontend Vite consomme directement cette API.
+## ✨ Fonctionnalites
 
-## Fonctionnalités clés
-- Endpoint `/api/v1/summary` (`GET` ou `POST`) branché sur OpenAI.
-- Extraction de texte HTML/plain text avant analyse IA.
-- Résumé IA + notation A→E + points clés + risques + recommandation.
-- Quotas journaliers par domaine (table limites + usage quotidien).
-- Bouton de signalement et audit admin (optionnel).
-- Panel admin sans comptes publics (protégé par un token côté backend).
+- **API Go (Gin)**: endpoint principal `POST /api/v1/summary`
+- **Extraction de contenu** depuis une URL cible
+- **Analyse OpenAI** avec sortie JSON stricte
+- **Frontend Vite** sombre, anime, responsive
+- **Page de test backend**: `/web/test.html`
 
-## Stack technique
-- **Backend** : Go (Gin, pgx), chargement .env prioritaire `backend/.env`, port HTTP par défaut **9000**.
-- **Base** : PostgreSQL 15+ (UUID + JSONB), migrations idempotentes intégrées (lecture de `backend/config/database_init.sql`).
-- **Frontend** : Vite + HTML/CSS/JS (vanilla).
+---
 
-## Arborescence
-- `backend/` : API Go, migrations intégrées, fichiers `.env`.
-- `frontend/` : client Vite en HTML/CSS/JS.
-- `PLAN.md` : feuille de route.
+## 🧱 Stack
 
-## Démarrage rapide (local)
+- **Backend**: Go 1.22+ (`backend/`)
+- **Frontend**: Vite + HTML/CSS/JS (`frontend/`)
+- **Database**: PostgreSQL 15+ (optionnelle en mode dev API-only)
+- **Reverse proxy**: NGINX (exemple fourni: `nginx.example.conf`)
+
+---
+
+## 📁 Arborescence utile
+
+- `backend/` → serveur API, config, schema SQL
+- `frontend/` → application web (vitrine + `/tosai`)
+- `nginx.example.conf` → configuration NGINX de reference
+- `Makefile` → commandes rapides (`setup`, `dev-backend`, `dev-frontend`, `test`)
+
+---
+
+## ⚡ Demarrage rapide (local)
+
+### 1) Preparation
+
 ```bash
-# 1) Cloner & se placer sur la racine
-cd TOSAI
+cd /opt/tosai
+make setup
+```
 
-# Option A (rapide): préparer l'environnement automatiquement
+Puis editez `backend/.env` et renseignez au minimum:
+
+```env
+OPENAI_API_KEY=sk-...
+```
+
+### 2) Lancer le backend
+
+```bash
+cd /opt/tosai
+make dev-backend
+```
+
+Backend: **http://localhost:9000**
+
+### 3) Lancer le frontend
+
+```bash
+cd /opt/tosai
+make dev-frontend
+```
+
+Frontend: **http://localhost:5173**
+
+### 4) Tester
+
+- Vitrine: `http://localhost:5173/`
+- Outil: `http://localhost:5173/tosai`
+- API health: `http://localhost:9000/healthz`
+- Test API backend: `http://localhost:9000/web/test.html`
+
+---
+
+## 🏠 Guide auto-hebergement (clair et direct)
+
+### 1) Ou placer le projet
+
+Recommande en production:
+- **Code source**: `/opt/tosai`
+- **Build frontend servi par NGINX**: `/var/www/tosai`
+- **Binaire backend**: `/opt/tosai/bin/tosai-backend`
+
+### 2) Installer le projet
+
+```bash
+sudo mkdir -p /opt
+cd /opt
+sudo git clone https://github.com/gabrielb0x/TOSAI.git tosai
+sudo chown -R $USER:$USER /opt/tosai
+cd /opt/tosai
+```
+
+### 3) Configurer l'environnement backend
+
+```bash
+cp backend/.env.example backend/.env
+nano backend/.env
+```
+
+Variables minimales:
+
+```env
+APP_ENV=prod
+APP_PORT=9000
+OPENAI_API_KEY=sk-...
+DATABASE_URL=postgres://tosai_app:motdepasse@127.0.0.1:5432/tosai?sslmode=disable
+CORS_ORIGINS=https://votre-domaine.com
+```
+
+### 4) Build backend + frontend
+
+```bash
+cd /opt/tosai/backend
+go build -o /opt/tosai/bin/tosai-backend ./cmd/server
+
+cd /opt/tosai/frontend
+npm install
+npm run build
+sudo rm -rf /var/www/tosai
+sudo mkdir -p /var/www/tosai
+sudo cp -r dist/* /var/www/tosai/
+```
+
+### 5) Service systemd backend
+
+Creer `/etc/systemd/system/tosai-backend.service`:
+
+```ini
+[Unit]
+Description=TOSAI Backend
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/opt/tosai/backend
+EnvironmentFile=/opt/tosai/backend/.env
+ExecStart=/opt/tosai/bin/tosai-backend
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Activer:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now tosai-backend
+sudo systemctl status tosai-backend
+```
+
+### 6) NGINX
+
+- Utilisez `nginx.example.conf` comme base.
+- Le `try_files ... /index.html;` est indispensable pour supporter **`/tosai`**.
+
+Exemple d'installation:
+
+```bash
+sudo cp /opt/tosai/nginx.example.conf /etc/nginx/sites-available/tosai
+sudo ln -sf /etc/nginx/sites-available/tosai /etc/nginx/sites-enabled/tosai
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+---
+
+## 🧪 Commandes utiles
+
+```bash
+# Installer dependances + .env
 make setup
 
-# Option B (manuel): préparer l'environnement
-cp backend/.env.example backend/.env
-# renseigner OPENAI_API_KEY dans backend/.env
+# Developpement
+make dev-backend
+make dev-frontend
 
-# 2) Démarrer le backend (terminal 1)
-cd backend
-go run ./cmd/server
-
-# 3) Démarrer le frontend (terminal 2)
-cd ../frontend
-npm install
-npm run dev -- --host --port 5173
-```
-- L'API écoute sur http://localhost:9000.
-- Le frontend est sur http://localhost:5173 et proxy automatiquement `/api` vers `:9000`.
-- La page de test API : http://localhost:9000/web/test.html
-
-## Configuration PostgreSQL
-1. Créer la base et l’utilisateur applicatif (commande à exécuter avec un superuser) :
-   ```bash
-   psql -U postgres <<'SQL'
-   CREATE DATABASE tosai;
-   CREATE USER tosai_app WITH PASSWORD 'motdepasse';
-   GRANT ALL PRIVILEGES ON DATABASE tosai TO tosai_app;
-   SQL
-   ```
-2. Appliquer le schéma si nécessaire (idempotent) :
-   ```bash
-   psql -d tosai -f backend/config/database_init.sql
-   ```
-3. Au démarrage, le backend applique automatiquement le même DDL via pgx. Si l’utilisateur n’a pas les droits `CREATE`/`ALTER`, le log indiquera l’erreur et la marche à suivre.
-
-> Aucun rôle ni base n’est créé automatiquement par le code en production : fournissez un utilisateur ayant les droits sur la base cible.
-
-## Lancer le backend Go
-```bash
-cd backend
-cp .env.example .env  # ou utilisez backend/config/.env si besoin
-APP_PORT=9000 go run ./cmd/server
-```
-- `OPENAI_API_KEY` est requis pour utiliser `/api/v1/summary`.
-- `DATABASE_URL` est optionnel (mode API-only possible pour dev rapide).
-- Si `DATABASE_URL` est fourni, le backend tente connexion + migration (`database_init.sql`).
-- Variables supportées : voir [Variables d’environnement](#variables-denvironnement).
-
-## Lancer le frontend Vite (HTML/CSS/JS)
-```bash
-cd frontend
-npm install
-npm run dev -- --host --port 5173
-# ou build production
-npm run build
-```
-- En local, aucune variable front n'est obligatoire (proxy Vite actif).
-- Optionnel: `VITE_API_BASE_URL` pour forcer une base API externe.
-
-## Déploiement Raspberry Pi 5 + NGINX
-- OS recommandé : Raspberry Pi OS/Debian 12 (arm64). Go et Node fonctionnent nativement.
-- Placer le code dans `/opt/tosai` et les artefacts frontend buildés dans `/var/www/tosai`.
-- Exemple de service backend :
-  ```bash
-  cd /opt/tosai/backend
-  APP_ENV=prod APP_PORT=9000 DATABASE_URL=postgres://tosai_app:motdepasse@127.0.0.1:5432/tosai?sslmode=disable \
-    /usr/local/bin/go run ./cmd/server
-  ```
-- Exemple complet NGINX : `nginx.example.conf` à la racine du repo.
-- Pensez à ouvrir le port 9000 localement uniquement (NGINX fait l’externalisation).
-
-## Variables d’environnement
-Fichier prioritaire : `backend/.env` (puis `backend/config/.env`).
-- `APP_ENV` : `local` | `prod`
-- `APP_PORT` : port HTTP (défaut `9000`)
-- `DATABASE_URL` : optionnel, ex. `postgres://tosai_app:motdepasse@127.0.0.1:5432/tosai?sslmode=disable`
-- `CORS_ORIGINS` : liste d’origines séparées par des virgules ou `*`
-- `ADMIN_API_TOKEN` : token serveur pour sécuriser les endpoints admin
-- `OPENAI_API_KEY` : clé requise pour l'analyse OpenAI
-- `OPENAI_MODEL` : modèle OpenAI (défaut `gpt-4.1-mini`)
-- `OPENAI_BASE_URL` : base URL API OpenAI (défaut `https://api.openai.com/v1`)
-- `HTTP_TIMEOUT_SECONDS` : timeout HTTP global (défaut `25`)
-- `ANALYSIS_INPUT_MAX_CHARS` : taille max du texte envoyé à OpenAI (défaut `12000`)
-- `VITE_BACKEND_PROXY_TARGET` (frontend/dev) : cible proxy Vite (défaut `http://localhost:9000`)
-
-## Tests
-```bash
-cd backend
-go test ./...
-
-cd ../frontend
-npm run build
+# Verification rapide
+make test
 ```
 
-Bonne contribution !
+---
+
+## 🔐 Variables d'environnement backend
+
+Fichier prioritaire: `backend/.env`.
+
+- `APP_ENV` (`local` ou `prod`)
+- `APP_PORT` (defaut `9000`)
+- `DATABASE_URL` (optionnelle mais recommandee en prod)
+- `CORS_ORIGINS` (liste CSV ou `*`)
+- `ADMIN_API_TOKEN`
+- `OPENAI_API_KEY` (**obligatoire pour l'analyse**)
+- `OPENAI_MODEL` (defaut `gpt-4.1-mini`)
+- `OPENAI_BASE_URL` (defaut `https://api.openai.com/v1`)
+- `HTTP_TIMEOUT_SECONDS` (defaut `25`)
+- `ANALYSIS_INPUT_MAX_CHARS` (defaut `12000`)
+- `VITE_BACKEND_PROXY_TARGET` (frontend dev, defaut `http://localhost:9000`)
+- `VITE_MASK_BUILD_FILENAMES` (frontend build, `true` = noms de fichiers hashes sans prefixe, ex `assets/abc123.css`)
+
+---
+
+## ✅ Etat du frontend
+
+- **`/`**: page de presentation moderne
+- **`/tosai`**: page outil d'analyse
+- **Theme sombre**, animations, et typographie **Poppins (600/800)**
+
+---
+
+## 🛟 Depannage rapide
+
+- Si `/api/v1/summary` renvoie une erreur: verifier `OPENAI_API_KEY` dans `backend/.env`.
+- Si `/tosai` ne charge pas en prod: verifier le `try_files` NGINX vers `/index.html`.
+- Si la DB echoue au demarrage: tester `DATABASE_URL` avec `psql` et verifier les droits `CREATE/ALTER`.
+
+---
+
+## 🤝 Licence
+
+Projet sous licence **MIT** (voir `LICENSE`).
