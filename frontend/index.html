@@ -5,12 +5,335 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="TOSAI analyse les CGU avec l'IA: note, resume, risques et recommendation en quelques secondes."
+      content="TOSAI presente les ToS dans une landing blanche, claire et inspiree des grands sites produit."
     />
-    <title>TOSAI - Analyse intelligente des CGU</title>
+    <title>TOSAI - Presentation claire des ToS</title>
   </head>
   <body>
     <div id="app"></div>
+
+    <template id="home-template">
+      <div class="layout layout-home">
+        <div class="backdrop" aria-hidden="true">
+          <span class="bubble bubble-blue"></span>
+          <span class="bubble bubble-yellow"></span>
+          <span class="bubble bubble-green"></span>
+          <span class="mesh"></span>
+        </div>
+
+        <header class="topbar nav-shell">
+          <a href="/" data-nav data-route="/" class="brand" aria-label="Accueil TOSAI">
+            <img src="/assets/tosai.webp" alt="Logo TOSAI" class="brand-logo" />
+            <span>TOSAI</span>
+          </a>
+
+          <nav class="nav-links" aria-label="Navigation principale">
+            <a href="/" data-nav data-route="/">Accueil</a>
+            <a href="#why">Pourquoi</a>
+            <a href="#usage">Exemple</a>
+            <a href="/tosai" data-nav data-route="/tosai" class="nav-cta">Ouvrir l'analyse</a>
+          </nav>
+        </header>
+
+        <main class="home-main">
+          <section class="hero-shell">
+            <img src="/assets/tosai.webp" alt="Logo TOSAI" class="hero-logo motion-item" />
+            <h1 class="hero-title motion-item">Comprendre des ToS devrait prendre quelques secondes.</h1>
+            <p class="hero-subtitle motion-item">
+              TOSAI transforme une page juridique indigeste en lecture claire, visuelle et utile,
+              pour comprendre vite ce que tu acceptes vraiment.
+            </p>
+            <div class="hero-actions motion-item">
+              <a href="/tosai" data-nav class="btn btn-solid">Lancer une analyse</a>
+              <a href="#why" class="btn btn-outline">Scroller pour voir</a>
+            </div>
+            <div class="scroll-hint motion-item">
+              <span class="scroll-pill" aria-hidden="true"><span></span></span>
+              <span>Scroller pour comprendre</span>
+            </div>
+          </section>
+
+          <section id="why" class="chapter-head" data-animate>
+            <h2>Pourquoi les ToS sont-elles devenues un probleme ?</h2>
+            <p>
+              Parce qu'elles sont longues, floues, et qu'on nous demande de les accepter dans des
+              moments ou personne n'a ni le temps ni l'energie de tout decoder.
+            </p>
+          </section>
+
+          <section class="story-row" data-story>
+            <div class="story-media visual-reading">
+              <div class="stage">
+                <div class="stage-badge">
+                  <img src="/assets/tosai.webp" alt="Logo TOSAI" />
+                  <span>Lecture brute</span>
+                </div>
+                <div class="reading-paper">
+                  <div class="paper-chip">
+                    <img src="/assets/tosai.webp" alt="Logo TOSAI" />
+                    <span>CGU interminables</span>
+                  </div>
+                  <div class="paper-lines">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </div>
+                  <div class="paper-flag">18 minutes de lecture</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="story-copy">
+              <p class="story-kicker">Trop dense</p>
+              <h3>Des blocs de texte immenses, sans hierarchie lisible.</h3>
+              <p>
+                Tout est empile au meme niveau: obligations, exceptions, collecte de donnees,
+                clauses de responsabilite. On accepte souvent avant meme d'avoir commence a lire.
+              </p>
+            </div>
+          </section>
+
+          <section class="story-row" data-story>
+            <div class="story-media visual-risk">
+              <div class="risk-layout">
+                <div class="risk-pill-row">
+                  <span class="risk-pill is-red">Clause floue</span>
+                  <span class="risk-pill is-yellow">Partage de donnees</span>
+                  <span class="risk-pill is-blue">Modification unilaterale</span>
+                </div>
+                <div class="risk-board">
+                  <div class="risk-row">
+                    <div class="risk-column">
+                      <div class="risk-card">
+                        <strong>Resume juridique</strong>
+                        <span>Complexe a comparer</span>
+                      </div>
+                      <div class="risk-card">
+                        <strong>Risque utilisateur</strong>
+                        <span>Difficile a reperer</span>
+                      </div>
+                    </div>
+                    <div class="risk-column">
+                      <div class="risk-card">
+                        <strong>Consentement</strong>
+                        <span>Souvent trop rapide</span>
+                      </div>
+                      <div class="risk-card">
+                        <strong>Consequence</strong>
+                        <span>Rarement comprise</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="story-copy">
+              <p class="story-kicker">Trop flou</p>
+              <h3>Les points sensibles sont noyes dans un langage qui fatigue.</h3>
+              <p>
+                Ce qui compte vraiment est rarement mis en avant: combien de temps les donnees sont
+                conservees, ce qui change sans prevenir, et ce que l'utilisateur abandonne au passage.
+              </p>
+            </div>
+          </section>
+
+          <section class="story-row" data-story>
+            <div class="story-media visual-fatigue">
+              <div class="fatigue-layout">
+                <span class="timeline-chip">Trop de friction avant l'action</span>
+                <div class="timeline-surface">
+                  <div class="timeline-track"></div>
+                  <div class="timeline-lines">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </div>
+                  <div class="timeline-note">Lecture lente, decision rapide, comprehension faible</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="story-copy">
+              <p class="story-kicker">Trop chronophage</p>
+              <h3>Le moment ou il faudrait reflechir est justement celui ou on veut aller vite.</h3>
+              <p>
+                Installer une app, creer un compte, tester un service: les ToS arrivent toujours au
+                pire moment. TOSAI casse ce decalage en allant directement a l'essentiel.
+              </p>
+            </div>
+          </section>
+
+          <section id="usage" class="chapter-head" data-animate>
+            <h2>Un exemple d'utilisation, simplement.</h2>
+            <p>
+              Tu colles une URL, TOSAI lit la page, en extrait les points cles, remonte les risques
+              et te donne une synthese avant que tu prennes une decision.
+            </p>
+          </section>
+
+          <section class="story-row" data-story>
+            <div class="story-media visual-usage">
+              <div class="usage-layout">
+                <div class="usage-head">
+                  <img src="/assets/tosai.webp" alt="Logo TOSAI" />
+                  <span>TOSAI Summary</span>
+                </div>
+                <div class="usage-device">
+                  <div class="usage-input">https://example.com/terms</div>
+                  <div class="usage-result">
+                    <div class="usage-grade">B</div>
+                    <div class="usage-copy">
+                      <strong>3 risques detectes</strong>
+                      <span>Resume clair et recommandation directe</span>
+                    </div>
+                  </div>
+                  <div class="usage-lines">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="story-copy">
+              <p class="story-kicker">Exemple concret</p>
+              <h3>Une lecture rapide avant de cliquer sur “j'accepte”.</h3>
+              <ol class="example-list">
+                <li><strong>1.</strong> Tu colles l'URL d'une page de ToS ou de politique.</li>
+                <li><strong>2.</strong> TOSAI extrait le contenu et le transforme en points cles lisibles.</li>
+                <li><strong>3.</strong> Tu recuperes une note, des risques, un resume et une recommandation.</li>
+              </ol>
+            </div>
+          </section>
+        </main>
+
+        <footer class="site-footer">
+          <span>Status services</span>
+          <span aria-hidden="true">&bull;</span>
+          <span>&copy; 2026 g0x.dev &mdash; Tous droits r&eacute;serv&eacute;s.</span>
+        </footer>
+      </div>
+    </template>
+
+    <template id="tool-template">
+      <div class="layout layout-tool">
+        <div class="backdrop" aria-hidden="true">
+          <span class="bubble bubble-blue"></span>
+          <span class="bubble bubble-yellow"></span>
+          <span class="bubble bubble-green"></span>
+          <span class="mesh"></span>
+        </div>
+
+        <header class="topbar nav-shell">
+          <a href="/" data-nav data-route="/" class="brand" aria-label="Accueil TOSAI">
+            <img src="/assets/tosai.webp" alt="Logo TOSAI" class="brand-logo" />
+            <span>TOSAI</span>
+          </a>
+
+          <nav class="nav-links" aria-label="Navigation principale">
+            <a href="/" data-nav data-route="/">Presentation</a>
+            <a href="/tosai" data-nav data-route="/tosai" class="nav-cta">Analyse</a>
+          </nav>
+        </header>
+
+        <main class="tool-main">
+          <section class="tool-hero">
+            <h1 class="motion-item">Une analyse claire, sans friction.</h1>
+            <p class="motion-item">
+              Colle une URL et recupere une note, un resume, les points cles et les risques dans
+              une interface plus legere et plus lisible.
+            </p>
+          </section>
+
+          <section class="tool-panels">
+            <div class="tool-stack">
+              <form id="analyze-form" class="panel tool-form" data-animate>
+                <label for="tos-url">URL a analyser</label>
+                <div class="field-row">
+                  <input id="tos-url" name="tos-url" type="url" placeholder="https://example.com/terms" required />
+                  <button type="submit">Analyser</button>
+                </div>
+                <p class="hint">
+                  Backend: <strong id="api-base">-</strong> <span aria-hidden="true">•</span> Endpoint:
+                  <code id="api-endpoint">-</code>
+                </p>
+              </form>
+
+              <section class="panel raw-panel" data-animate>
+                <p class="section-eyebrow">Payload</p>
+                <h2>Reponse brute</h2>
+                <pre id="raw-response" class="raw">En attente...</pre>
+              </section>
+            </div>
+
+            <div class="tool-side-stack">
+              <section class="panel status-panel" data-animate>
+                <p class="section-eyebrow">Etat</p>
+                <h2>Suivi de la requete</h2>
+                <div class="status-grid">
+                  <article class="status-item">
+                    <span class="label">Statut</span>
+                    <p id="status-text" class="status-value">Pret</p>
+                  </article>
+                  <article class="status-item">
+                    <span class="label">HTTP</span>
+                    <p id="status-code" class="status-value">-</p>
+                  </article>
+                  <article class="status-item">
+                    <span class="label">Maj</span>
+                    <p id="status-time" class="status-value">-</p>
+                  </article>
+                  <article class="status-item">
+                    <span class="label">Confiance</span>
+                    <p id="confidence" class="status-value">-</p>
+                  </article>
+                </div>
+              </section>
+
+              <section class="panel summary-panel" data-animate>
+                <div class="summary-head">
+                  <div>
+                    <span class="label">Note globale</span>
+                    <p id="rating" class="rating" data-rating="X">-</p>
+                  </div>
+                </div>
+                <p id="summary-text" class="summary-text">Aucun resume pour le moment.</p>
+                <p id="recommendation" class="recommendation">Recommendation en attente.</p>
+              </section>
+
+              <section class="panel list-panel" data-animate>
+                <p class="section-eyebrow">Lecture</p>
+                <h2>Points cles et risques</h2>
+                <div class="split-panel">
+                  <article>
+                    <span class="label">Points cles</span>
+                    <ul id="highlights-list" class="bullet-list">
+                      <li>En attente d'analyse.</li>
+                    </ul>
+                  </article>
+                  <article>
+                    <span class="label">Risques detectes</span>
+                    <ul id="risks-list" class="bullet-list">
+                      <li>En attente d'analyse.</li>
+                    </ul>
+                  </article>
+                </div>
+              </section>
+            </div>
+          </section>
+        </main>
+
+        <footer class="site-footer">
+          <span>Status services</span>
+          <span aria-hidden="true">&bull;</span>
+          <span>&copy; 2026 g0x.dev &mdash; Tous droits r&eacute;serv&eacute;s.</span>
+        </footer>
+      </div>
+    </template>
+
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
