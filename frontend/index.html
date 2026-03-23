@@ -27,7 +27,13 @@
             <span>TOSAI</span>
           </a>
 
-          <nav class="nav-links" aria-label="Navigation principale">
+          <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-label="Ouvrir le menu">
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+
+          <nav class="nav-links" aria-label="Navigation principale" data-menu-panel>
             <a href="/" data-nav data-route="/">Accueil</a>
             <a href="#why">Pourquoi</a>
             <a href="#usage">Exemple</a>
@@ -46,10 +52,6 @@
             <div class="hero-actions motion-item">
               <a href="/tosai" data-nav class="btn btn-solid">Lancer une analyse</a>
               <a href="#why" class="btn btn-outline">Scroller pour voir</a>
-            </div>
-            <div class="scroll-hint motion-item">
-              <span class="scroll-pill" aria-hidden="true"><span></span></span>
-              <span>Scroller pour comprendre</span>
             </div>
           </section>
 
@@ -85,7 +87,6 @@
             </div>
 
             <div class="story-copy">
-              <p class="story-kicker">Trop dense</p>
               <h3>Des blocs de texte immenses, sans hierarchie lisible.</h3>
               <p>
                 Tout est empile au meme niveau: obligations, exceptions, collecte de donnees,
@@ -130,7 +131,6 @@
             </div>
 
             <div class="story-copy">
-              <p class="story-kicker">Trop flou</p>
               <h3>Les points sensibles sont noyes dans un langage qui fatigue.</h3>
               <p>
                 Ce qui compte vraiment est rarement mis en avant: combien de temps les donnees sont
@@ -156,7 +156,6 @@
             </div>
 
             <div class="story-copy">
-              <p class="story-kicker">Trop chronophage</p>
               <h3>Le moment ou il faudrait reflechir est justement celui ou on veut aller vite.</h3>
               <p>
                 Installer une app, creer un compte, tester un service: les ToS arrivent toujours au
@@ -199,8 +198,7 @@
             </div>
 
             <div class="story-copy">
-              <p class="story-kicker">Exemple concret</p>
-              <h3>Une lecture rapide avant de cliquer sur “j'accepte”.</h3>
+              <h3>Une lecture rapide avant de cliquer sur j'accepte.</h3>
               <ol class="example-list">
                 <li><strong>1.</strong> Tu colles l'URL d'une page de ToS ou de politique.</li>
                 <li><strong>2.</strong> TOSAI extrait le contenu et le transforme en points cles lisibles.</li>
@@ -211,9 +209,10 @@
         </main>
 
         <footer class="site-footer">
-          <span>Status services</span>
-          <span aria-hidden="true">&bull;</span>
-          <span>&copy; 2026 g0x.dev &mdash; Tous droits r&eacute;serv&eacute;s.</span>
+          <a href="https://status.g0x.dev" target="_blank" rel="noreferrer noopener" class="status-link">
+            Status services
+          </a>
+          <p class="footer-copy">&copy; 2026 g0x.dev &mdash; Tous droits r&eacute;serv&eacute;s.</p>
         </footer>
       </div>
     </template>
@@ -233,103 +232,128 @@
             <span>TOSAI</span>
           </a>
 
-          <nav class="nav-links" aria-label="Navigation principale">
-            <a href="/" data-nav data-route="/">Presentation</a>
-            <a href="/tosai" data-nav data-route="/tosai" class="nav-cta">Analyse</a>
+          <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-label="Ouvrir le menu">
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+
+          <nav class="nav-links" aria-label="Navigation principale" data-menu-panel>
+            <a href="/mentions-legales" data-nav data-route="/mentions-legales">Mentions l&eacute;gales</a>
+            <span class="nav-disabled" aria-disabled="true">Analyse</span>
           </nav>
         </header>
 
         <main class="tool-main">
           <section class="tool-hero">
-            <h1 class="motion-item">Une analyse claire, sans friction.</h1>
+            <h1 class="motion-item">Analyser une page de ToS.</h1>
             <p class="motion-item">
-              Colle une URL et recupere une note, un resume, les points cles et les risques dans
-              une interface plus legere et plus lisible.
+              Colle une URL et lis directement les bons points, les points sensibles et la note
+              globale dans une interface claire et centree.
             </p>
           </section>
 
-          <section class="tool-panels">
-            <div class="tool-stack">
-              <form id="analyze-form" class="panel tool-form" data-animate>
-                <label for="tos-url">URL a analyser</label>
-                <div class="field-row">
-                  <input id="tos-url" name="tos-url" type="url" placeholder="https://example.com/terms" required />
-                  <button type="submit">Analyser</button>
-                </div>
-                <p class="hint">
-                  Backend: <strong id="api-base">-</strong> <span aria-hidden="true">•</span> Endpoint:
-                  <code id="api-endpoint">-</code>
-                </p>
-              </form>
+          <section class="tool-search-wrap" data-animate>
+            <form id="analyze-form" class="tool-form">
+              <label for="tos-url">URL a analyser</label>
+              <div class="field-row">
+                <input id="tos-url" name="tos-url" type="url" placeholder="https://example.com/terms" required />
+                <button type="submit">Analyser</button>
+              </div>
+            </form>
+          </section>
 
-              <section class="panel raw-panel" data-animate>
-                <p class="section-eyebrow">Payload</p>
-                <h2>Reponse brute</h2>
-                <pre id="raw-response" class="raw">En attente...</pre>
-              </section>
+          <section class="panel result-panel" data-animate>
+            <div class="result-head">
+              <div>
+                <span class="label">Note</span>
+                <p id="rating" class="rating" data-rating="X">-</p>
+              </div>
             </div>
 
-            <div class="tool-side-stack">
-              <section class="panel status-panel" data-animate>
-                <p class="section-eyebrow">Etat</p>
-                <h2>Suivi de la requete</h2>
-                <div class="status-grid">
-                  <article class="status-item">
-                    <span class="label">Statut</span>
-                    <p id="status-text" class="status-value">Pret</p>
-                  </article>
-                  <article class="status-item">
-                    <span class="label">HTTP</span>
-                    <p id="status-code" class="status-value">-</p>
-                  </article>
-                  <article class="status-item">
-                    <span class="label">Maj</span>
-                    <p id="status-time" class="status-value">-</p>
-                  </article>
-                  <article class="status-item">
-                    <span class="label">Confiance</span>
-                    <p id="confidence" class="status-value">-</p>
-                  </article>
-                </div>
-              </section>
+            <p id="summary-text" class="summary-text">Aucun resume pour le moment.</p>
 
-              <section class="panel summary-panel" data-animate>
-                <div class="summary-head">
-                  <div>
-                    <span class="label">Note globale</span>
-                    <p id="rating" class="rating" data-rating="X">-</p>
-                  </div>
-                </div>
-                <p id="summary-text" class="summary-text">Aucun resume pour le moment.</p>
-                <p id="recommendation" class="recommendation">Recommendation en attente.</p>
-              </section>
+            <div class="split-panel">
+              <article>
+                <span class="label">Bons points</span>
+                <ul id="highlights-list" class="bullet-list">
+                  <li>Les bons points apparaitront ici apres analyse.</li>
+                </ul>
+              </article>
+              <article>
+                <span class="label">Mauvais points</span>
+                <ul id="risks-list" class="bullet-list">
+                  <li>Les points sensibles apparaitront ici apres analyse.</li>
+                </ul>
+              </article>
+            </div>
 
-              <section class="panel list-panel" data-animate>
-                <p class="section-eyebrow">Lecture</p>
-                <h2>Points cles et risques</h2>
-                <div class="split-panel">
-                  <article>
-                    <span class="label">Points cles</span>
-                    <ul id="highlights-list" class="bullet-list">
-                      <li>En attente d'analyse.</li>
-                    </ul>
-                  </article>
-                  <article>
-                    <span class="label">Risques detectes</span>
-                    <ul id="risks-list" class="bullet-list">
-                      <li>En attente d'analyse.</li>
-                    </ul>
-                  </article>
-                </div>
-              </section>
+            <div class="result-actions">
+              <button type="button" id="retry-analysis" class="btn btn-outline">Refaire l'analyse</button>
+              <button type="button" id="human-check" class="btn btn-solid">Demander une verification humaine</button>
+            </div>
+
+            <p id="human-feedback" class="human-feedback" hidden></p>
+          </section>
+        </main>
+
+        <footer class="site-footer">
+          <a href="https://status.g0x.dev" target="_blank" rel="noreferrer noopener" class="status-link">
+            Status services
+          </a>
+          <p class="footer-copy">&copy; 2026 g0x.dev &mdash; Tous droits r&eacute;serv&eacute;s.</p>
+        </footer>
+      </div>
+    </template>
+
+    <template id="legal-template">
+      <div class="layout layout-legal">
+        <div class="backdrop" aria-hidden="true">
+          <span class="bubble bubble-blue"></span>
+          <span class="bubble bubble-yellow"></span>
+          <span class="bubble bubble-green"></span>
+          <span class="mesh"></span>
+        </div>
+
+        <header class="topbar nav-shell">
+          <a href="/" data-nav data-route="/" class="brand" aria-label="Accueil TOSAI">
+            <img src="/assets/tosai.webp" alt="Logo TOSAI" class="brand-logo" />
+            <span>TOSAI</span>
+          </a>
+
+          <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-label="Ouvrir le menu">
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+
+          <nav class="nav-links" aria-label="Navigation principale" data-menu-panel>
+            <a href="/mentions-legales" data-nav data-route="/mentions-legales">Mentions l&eacute;gales</a>
+            <a href="/tosai" data-nav data-route="/tosai" class="nav-cta">Ouvrir l'analyse</a>
+          </nav>
+        </header>
+
+        <main class="legal-main">
+          <section class="panel legal-panel" data-animate>
+            <p class="section-eyebrow">Mentions legales</p>
+            <h1>Mentions legales</h1>
+            <p>
+              Cette page sert de point d'entree legal pour TOSAI. Les informations definitives
+              seront completees avant la mise en ligne publique du service.
+            </p>
+            <div class="legal-list">
+              <p><strong>Service :</strong> TOSAI</p>
+              <p><strong>Editeur :</strong> g0x.dev</p>
+              <p><strong>Statut :</strong> publication des informations detaillees en cours</p>
             </div>
           </section>
         </main>
 
         <footer class="site-footer">
-          <span>Status services</span>
-          <span aria-hidden="true">&bull;</span>
-          <span>&copy; 2026 g0x.dev &mdash; Tous droits r&eacute;serv&eacute;s.</span>
+          <a href="https://status.g0x.dev" target="_blank" rel="noreferrer noopener" class="status-link">
+            Status services
+          </a>
+          <p class="footer-copy">&copy; 2026 g0x.dev &mdash; Tous droits r&eacute;serv&eacute;s.</p>
         </footer>
       </div>
     </template>

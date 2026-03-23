@@ -21,6 +21,7 @@ const CONFIG = {
 const ROUTES = {
   home: '/',
   tool: '/tosai',
+  legal: '/mentions-legales',
 }
 
 let cleanupFns = []
@@ -68,8 +69,13 @@ const showFatalError = (error) => {
 
 const normalizePath = (pathname) => {
   const safePath = (pathname || '/').replace(/\/+$/, '') || '/'
+
   if (safePath === ROUTES.tool || safePath.startsWith(`${ROUTES.tool}/`)) {
     return ROUTES.tool
+  }
+
+  if (safePath === ROUTES.legal || safePath.startsWith(`${ROUTES.legal}/`)) {
+    return ROUTES.legal
   }
 
   return ROUTES.home
@@ -88,6 +94,47 @@ const runCleanup = () => {
 const activateNavState = (route) => {
   document.querySelectorAll('[data-route]').forEach((link) => {
     link.classList.toggle('is-active', link.getAttribute('data-route') === route)
+  })
+}
+
+const setupMenus = () => {
+  const header = document.querySelector('.topbar')
+  const toggle = document.querySelector('[data-menu-toggle]')
+  const panel = document.querySelector('[data-menu-panel]')
+
+  if (!header || !toggle || !panel) {
+    return
+  }
+
+  const setOpen = (open) => {
+    header.classList.toggle('is-open', open)
+    toggle.setAttribute('aria-expanded', String(open))
+  }
+
+  const toggleMenu = () => {
+    setOpen(!header.classList.contains('is-open'))
+  }
+
+  const closeMenu = () => {
+    setOpen(false)
+  }
+
+  const handleResize = () => {
+    if (window.innerWidth > 760) {
+      closeMenu()
+    }
+  }
+
+  const links = [...panel.querySelectorAll('a')]
+
+  toggle.addEventListener('click', toggleMenu)
+  links.forEach((link) => link.addEventListener('click', closeMenu))
+  window.addEventListener('resize', handleResize)
+
+  addCleanup(() => {
+    toggle.removeEventListener('click', toggleMenu)
+    links.forEach((link) => link.removeEventListener('click', closeMenu))
+    window.removeEventListener('resize', handleResize)
   })
 }
 
@@ -116,9 +163,9 @@ const setupMotion = () => {
   if (nav) {
     trackTween(
       gsap.from(nav, {
-        y: -20,
+        y: -16,
         autoAlpha: 0,
-        duration: 0.9,
+        duration: 0.8,
         ease: 'power3.out',
       }),
     )
@@ -127,12 +174,12 @@ const setupMotion = () => {
   if (heroItems.length > 0) {
     trackTween(
       gsap.from(heroItems, {
-        y: 44,
+        y: 36,
         autoAlpha: 0,
-        duration: 1.05,
-        stagger: 0.1,
+        duration: 0.95,
+        stagger: 0.08,
         ease: 'power3.out',
-        delay: 0.05,
+        delay: 0.04,
       }),
     )
   }
@@ -140,9 +187,9 @@ const setupMotion = () => {
   if (footer) {
     trackTween(
       gsap.from(footer, {
-        y: 28,
+        y: 20,
         autoAlpha: 0,
-        duration: 0.9,
+        duration: 0.85,
         ease: 'power3.out',
       }),
     )
@@ -150,8 +197,8 @@ const setupMotion = () => {
 
   if (scrollHint) {
     const tween = gsap.to(scrollHint, {
-      y: 8,
-      duration: 1.4,
+      y: 6,
+      duration: 1.3,
       repeat: -1,
       yoyo: true,
       ease: 'sine.inOut',
@@ -162,10 +209,10 @@ const setupMotion = () => {
 
   bubbles.forEach((bubble, index) => {
     const tween = gsap.to(bubble, {
-      x: index === 0 ? 38 : index === 1 ? -30 : 20,
-      y: index === 0 ? 24 : index === 1 ? 32 : -18,
-      scale: index === 2 ? 1.08 : 0.94,
-      duration: 8 + index * 1.5,
+      x: index === 0 ? 30 : index === 1 ? -24 : 16,
+      y: index === 0 ? 18 : index === 1 ? 26 : -14,
+      scale: index === 2 ? 1.06 : 0.95,
+      duration: 7 + index * 1.5,
       repeat: -1,
       yoyo: true,
       ease: 'sine.inOut',
@@ -177,9 +224,9 @@ const setupMotion = () => {
   sectionItems.forEach((item) => {
     trackTween(
       gsap.from(item, {
-        y: 56,
+        y: 44,
         autoAlpha: 0,
-        duration: 1,
+        duration: 0.9,
         ease: 'power3.out',
         scrollTrigger: {
           trigger: item,
@@ -197,13 +244,13 @@ const setupMotion = () => {
     if (media) {
       trackTween(
         gsap.from(media, {
-          x: -72,
+          x: -56,
           autoAlpha: 0,
-          duration: 1.05,
+          duration: 0.95,
           ease: 'power3.out',
           scrollTrigger: {
             trigger: row,
-            start: 'top 80%',
+            start: 'top 82%',
             once: true,
           },
         }),
@@ -213,13 +260,13 @@ const setupMotion = () => {
     if (copy) {
       trackTween(
         gsap.from(copy, {
-          x: 56,
+          x: 42,
           autoAlpha: 0,
-          duration: 1.05,
+          duration: 0.95,
           ease: 'power3.out',
           scrollTrigger: {
             trigger: row,
-            start: 'top 80%',
+            start: 'top 82%',
             once: true,
           },
         }),
@@ -239,11 +286,13 @@ const render = () => {
   runCleanup()
 
   const route = normalizePath(window.location.pathname)
-  const templateId = route === ROUTES.tool ? 'tool-template' : 'home-template'
+  const templateId =
+    route === ROUTES.tool ? 'tool-template' : route === ROUTES.legal ? 'legal-template' : 'home-template'
 
   app.innerHTML = getTemplateMarkup(templateId)
 
   activateNavState(route)
+  setupMenus()
   setupMotion()
 
   if (route === ROUTES.tool) {
@@ -291,9 +340,6 @@ const startApp = () => {
   render()
 }
 
-const formatTime = (date = new Date()) =>
-  date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-
 const withTimeout = async (promise, timeoutMs) => {
   let timeoutId
   const timeoutPromise = new Promise((_, reject) => {
@@ -315,25 +361,11 @@ const buildSummaryUrl = () => {
   return new URL(CONFIG.endpoint, CONFIG.apiBaseUrl).toString()
 }
 
-const toPrettyJSON = (value) => {
-  if (typeof value === 'string') {
-    return value
-  }
-
-  try {
-    return JSON.stringify(value, null, 2)
-  } catch (error) {
-    return String(value)
-  }
-}
-
 const extractSummary = (payload) => {
   if (!payload || typeof payload !== 'object') {
     return {
       rating: '-',
-      confidence: '-',
       summary: CONFIG.emptySummary,
-      recommendation: 'Recommendation indisponible.',
       highlights: [],
       risks: [],
     }
@@ -343,49 +375,35 @@ const extractSummary = (payload) => {
 
   return {
     rating: analysis.rating || analysis.note || analysis.grade || '-',
-    confidence: analysis.confidence || payload.confidence || '-',
     summary: analysis.summary || analysis.summary_md || payload.message || CONFIG.emptySummary,
-    recommendation: analysis.recommendation || 'Lire les clauses sensibles avant de continuer.',
     highlights: analysis.highlights || [],
     risks: analysis.risks || [],
   }
 }
 
 const initToolPage = () => {
-  const elements = {
-    form: document.getElementById('analyze-form'),
-    urlInput: document.getElementById('tos-url'),
-    statusText: document.getElementById('status-text'),
-    statusCode: document.getElementById('status-code'),
-    statusTime: document.getElementById('status-time'),
-    apiBase: document.getElementById('api-base'),
-    apiEndpoint: document.getElementById('api-endpoint'),
-    rating: document.getElementById('rating'),
-    confidence: document.getElementById('confidence'),
-    summary: document.getElementById('summary-text'),
-    recommendation: document.getElementById('recommendation'),
-    highlights: document.getElementById('highlights-list'),
-    risks: document.getElementById('risks-list'),
-    raw: document.getElementById('raw-response'),
-  }
+  const form = document.getElementById('analyze-form')
+  const urlInput = document.getElementById('tos-url')
+  const rating = document.getElementById('rating')
+  const summary = document.getElementById('summary-text')
+  const highlights = document.getElementById('highlights-list')
+  const risks = document.getElementById('risks-list')
+  const retryButton = document.getElementById('retry-analysis')
+  const humanButton = document.getElementById('human-check')
+  const humanFeedback = document.getElementById('human-feedback')
+  const submitButton = form?.querySelector('button[type="submit"]')
 
-  if (!elements.form) {
+  if (!form || !urlInput || !rating || !summary || !highlights || !risks || !submitButton) {
     return
   }
 
-  const updateStatus = ({ label, code = '-', time = '-' }) => {
-    elements.statusText.textContent = label
-    elements.statusCode.textContent = code
-    elements.statusTime.textContent = time
-  }
-
   const setRating = (value = '-') => {
-    const rating = String(value || '-')
+    const normalized = String(value || '-')
       .trim()
       .toUpperCase()
 
-    elements.rating.textContent = rating
-    elements.rating.dataset.rating = ['A', 'B', 'C', 'D', 'E'].includes(rating) ? rating : 'X'
+    rating.textContent = normalized
+    rating.dataset.rating = ['A', 'B', 'C', 'D', 'E'].includes(normalized) ? normalized : 'X'
   }
 
   const setList = (target, items, fallback) => {
@@ -399,47 +417,67 @@ const initToolPage = () => {
     })
   }
 
-  const updateSummary = ({
-    rating = '-',
-    confidence = '-',
-    summary = CONFIG.emptySummary,
-    recommendation = 'Recommendation en attente.',
-    highlights = [],
-    risks = [],
+  const updateResult = ({
+    ratingValue = '-',
+    summaryValue = CONFIG.emptySummary,
+    highlightsValue = [],
+    risksValue = [],
   }) => {
-    setRating(rating)
-    elements.confidence.textContent = confidence
-    elements.summary.textContent = summary
-    elements.recommendation.textContent = recommendation
-    setList(elements.highlights, highlights, 'Aucun point cle pour le moment.')
-    setList(elements.risks, risks, 'Aucun risque detecte pour le moment.')
+    setRating(ratingValue)
+    summary.textContent = summaryValue
+    setList(highlights, highlightsValue, 'Les bons points apparaitront ici apres analyse.')
+    setList(risks, risksValue, 'Les points sensibles apparaitront ici apres analyse.')
   }
 
-  const setRaw = (content) => {
-    elements.raw.textContent = content
+  const setLoadingState = (loading) => {
+    submitButton.disabled = loading
+    submitButton.textContent = loading ? 'Analyse...' : 'Analyser'
+
+    if (retryButton) {
+      retryButton.disabled = loading
+    }
+  }
+
+  const showHumanFeedback = (message) => {
+    if (!humanFeedback) {
+      return
+    }
+
+    humanFeedback.hidden = false
+    humanFeedback.textContent = message
+  }
+
+  const hideHumanFeedback = () => {
+    if (!humanFeedback) {
+      return
+    }
+
+    humanFeedback.hidden = true
+    humanFeedback.textContent = ''
   }
 
   const resetUI = () => {
-    updateStatus({ label: CONFIG.labels.idle })
-    updateSummary({})
-    setRaw('En attente...')
+    updateResult({})
+    hideHumanFeedback()
   }
 
   const submitForm = async (event) => {
     event.preventDefault()
 
-    const urlValue = elements.urlInput.value.trim()
+    const urlValue = urlInput.value.trim()
+    if (!urlValue) {
+      urlInput.focus()
+      return
+    }
 
-    updateStatus({ label: CONFIG.labels.loading, time: formatTime() })
-    updateSummary({
-      rating: '-',
-      confidence: '-',
-      summary: 'Chargement...',
-      recommendation: 'Analyse en cours.',
-      highlights: ['Extraction du contenu...'],
-      risks: ['Evaluation en cours...'],
+    hideHumanFeedback()
+    setLoadingState(true)
+    updateResult({
+      ratingValue: '-',
+      summaryValue: 'Analyse en cours...',
+      highlightsValue: ['Lecture de la page en cours...'],
+      risksValue: ['Detection des points sensibles en cours...'],
     })
-    setRaw('Requete en cours...')
 
     try {
       const response = await withTimeout(
@@ -462,43 +500,57 @@ const initToolPage = () => {
         payload = text
       }
 
-      const { rating, confidence, summary, recommendation, highlights, risks } = extractSummary(payload)
-      updateSummary({ rating, confidence, summary, recommendation, highlights, risks })
+      const { rating: ratingValue, summary: summaryValue, highlights: highlightsValue, risks: risksValue } =
+        extractSummary(payload)
 
-      updateStatus({
-        label: response.ok ? CONFIG.labels.success : CONFIG.labels.error,
-        code: response.status,
-        time: formatTime(),
+      updateResult({
+        ratingValue,
+        summaryValue,
+        highlightsValue,
+        risksValue,
       })
-
-      setRaw(toPrettyJSON(payload))
 
       if (!response.ok) {
         const message = payload && typeof payload === 'object' ? payload.message : null
         throw new Error(message || `HTTP ${response.status}`)
       }
     } catch (error) {
-      updateStatus({ label: CONFIG.labels.error, code: '-', time: formatTime() })
-      updateSummary({
-        rating: '-',
-        confidence: '-',
-        summary: "Impossible de contacter l'API.",
-        recommendation: 'Verifier backend, reseau et OPENAI_API_KEY.',
-        highlights: ['Aucune donnee disponible.'],
-        risks: ['Requete interrompue ou invalide.'],
+      updateResult({
+        ratingValue: '-',
+        summaryValue: "Impossible de contacter l'API pour le moment.",
+        highlightsValue: ['Aucune donnee exploitable disponible.'],
+        risksValue: ['La requete a echoue ou le backend est indisponible.'],
       })
-      setRaw(error instanceof Error ? error.message : String(error))
+    } finally {
+      setLoadingState(false)
     }
   }
 
-  elements.urlInput.value = CONFIG.defaultUrl
-  elements.apiBase.textContent = CONFIG.apiBaseUrl || 'proxy Vite (localhost:9000)'
-  elements.apiEndpoint.textContent = CONFIG.endpoint
-  elements.form.addEventListener('submit', submitForm)
+  const retryAnalysis = () => {
+    hideHumanFeedback()
+
+    if (typeof form.requestSubmit === 'function') {
+      form.requestSubmit()
+      return
+    }
+
+    submitButton.click()
+  }
+
+  const requestHumanCheck = () => {
+    showHumanFeedback('La verification humaine sera disponible lors de l ouverture publique du service.')
+  }
+
+  urlInput.value = CONFIG.defaultUrl
+  form.addEventListener('submit', submitForm)
+  retryButton?.addEventListener('click', retryAnalysis)
+  humanButton?.addEventListener('click', requestHumanCheck)
   resetUI()
 
   addCleanup(() => {
-    elements.form.removeEventListener('submit', submitForm)
+    form.removeEventListener('submit', submitForm)
+    retryButton?.removeEventListener('click', retryAnalysis)
+    humanButton?.removeEventListener('click', requestHumanCheck)
   })
 }
 
