@@ -15,7 +15,7 @@ Le frontend est maintenant organise en 2 pages:
 
 ## ✨ Fonctionnalites
 
-- **API Go (Gin)**: endpoint principal `POST /api/v1/summary`
+- **API Go (Gin)**: endpoint principal `POST /v1/summary` sur `https://api.tosai.fr`
 - **Extraction de contenu** depuis une URL cible
 - **Analyse OpenAI** avec sortie JSON stricte
 - **Frontend Vite** sombre, anime, responsive
@@ -28,7 +28,7 @@ Le frontend est maintenant organise en 2 pages:
 - **Backend**: Go 1.22+ (`backend/`)
 - **Frontend**: Vite + HTML/CSS/JS (`frontend/`)
 - **Database**: PostgreSQL 15+ (optionnelle en mode dev API-only)
-- **Reverse proxy**: NGINX (exemple fourni: `nginx.example.conf`)
+- **Reverse proxy**: NGINX avec vhosts separes frontend/API (exemple fourni: `nginx.example.conf`)
 
 ---
 
@@ -89,7 +89,7 @@ Frontend: **http://localhost:5173**
 
 Recommande en production:
 - **Code source**: `/opt/tosai`
-- **Build frontend servi par NGINX**: `/var/www/tosai`
+- **Build frontend servi par NGINX**: `/opt/tosai/frontend/dist`
 - **Binaire backend**: `/opt/tosai/bin/tosai-backend`
 
 ### 2) Installer le projet
@@ -116,7 +116,7 @@ APP_ENV=prod
 APP_PORT=9000
 OPENAI_API_KEY=sk-...
 DATABASE_URL=postgres://tosai_app:motdepasse@127.0.0.1:5432/tosai?sslmode=disable
-CORS_ORIGINS=https://votre-domaine.com
+CORS_ORIGINS=https://tosai.fr,https://www.tosai.fr
 ```
 
 ### 4) Build backend + frontend
@@ -128,9 +128,6 @@ go build -o /opt/tosai/bin/tosai-backend ./cmd/server
 cd /opt/tosai/frontend
 npm install
 npm run build
-sudo rm -rf /var/www/tosai
-sudo mkdir -p /var/www/tosai
-sudo cp -r dist/* /var/www/tosai/
 ```
 
 ### 5) Service systemd backend
@@ -166,6 +163,7 @@ sudo systemctl status tosai-backend
 ### 6) NGINX
 
 - Utilisez `nginx.example.conf` comme base.
+- Le fichier fourni separe `api.tosai.fr` (backend Go sur `127.0.0.1:9000`) et `tosai.fr`/`www.tosai.fr` (frontend statique).
 - Le `try_files ... /index.html;` est indispensable pour supporter **`/tosai`**.
 
 Exemple d'installation:
@@ -224,7 +222,7 @@ Fichier prioritaire: `backend/.env`.
 
 ## 🛟 Depannage rapide
 
-- Si `/api/v1/summary` renvoie une erreur: verifier `OPENAI_API_KEY` dans `backend/.env`.
+- Si `/v1/summary` renvoie une erreur: verifier `OPENAI_API_KEY` dans `backend/.env`.
 - Si `/tosai` ne charge pas en prod: verifier le `try_files` NGINX vers `/index.html`.
 - Si la DB echoue au demarrage: tester `DATABASE_URL` avec `psql` et verifier les droits `CREATE/ALTER`.
 

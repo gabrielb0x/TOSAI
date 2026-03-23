@@ -12,13 +12,15 @@ npm run dev -- --host --port 5173
 ```
 
 - URL locale: `http://localhost:5173`
-- Proxy API actif en dev sur `/api` et `/healthz` vers `http://localhost:9000`
+- Proxy API actif en dev sur `/v1` et `/healthz` vers `http://localhost:9000`
 
 ## ⚙️ Variables optionnelles
 
 - `VITE_API_BASE_URL` -> base API explicite (ex: `https://api.tosai.fr`)
 - `VITE_BACKEND_PROXY_TARGET` -> cible proxy Vite (defaut `http://localhost:9000`)
 - `VITE_MASK_BUILD_FILENAMES` -> `true` pour masquer les noms en build
+
+Sans `VITE_API_BASE_URL`, le frontend utilise automatiquement `https://api.tosai.fr` lorsqu'il tourne sur `tosai.fr` ou `www.tosai.fr`.
 
 Exemple:
 

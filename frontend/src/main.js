@@ -4,9 +4,27 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 
 gsap.registerPlugin(ScrollTrigger)
 
+const DEFAULT_API_BASE_URL = 'https://api.tosai.fr'
+const PUBLIC_API_HOSTNAMES = new Set(['tosai.fr', 'www.tosai.fr', 'api.tosai.fr'])
+
+const sanitizeBaseUrl = (value) => String(value || '').trim().replace(/\/+$/, '')
+
+const resolveApiBaseUrl = () => {
+  const explicitBaseUrl = sanitizeBaseUrl(import.meta.env.VITE_API_BASE_URL)
+  if (explicitBaseUrl) {
+    return explicitBaseUrl
+  }
+
+  if (typeof window === 'undefined') {
+    return ''
+  }
+
+  return PUBLIC_API_HOSTNAMES.has(window.location.hostname) ? DEFAULT_API_BASE_URL : ''
+}
+
 const CONFIG = {
-  apiBaseUrl: import.meta.env.VITE_API_BASE_URL ?? '',
-  endpoint: '/api/v1/summary',
+  apiBaseUrl: resolveApiBaseUrl(),
+  endpoint: '/v1/summary',
   defaultUrl: '',
   labels: {
     idle: 'Pret',

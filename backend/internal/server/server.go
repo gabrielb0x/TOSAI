@@ -43,7 +43,7 @@ func New(cfg config.Config, pool *pgxpool.Pool) *gin.Engine {
 		})
 	})
 
-	api := r.Group("/api/v1")
+	api := r.Group("/v1")
 	{
 		api.GET("/summary", analysisSvc.handleSummaryGET)
 		api.POST("/summary", analysisSvc.handleSummaryPOST)

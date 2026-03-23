@@ -169,7 +169,7 @@
 
         <section>
           <h2>Summary endpoint</h2>
-          <p>POST <code>/api/v1/summary</code> avec payload JSON.</p>
+          <p>POST <code>/v1/summary</code> avec payload JSON.</p>
           <div class="row">
             <input id="summary-url" type="text" placeholder="https://example.com/terms" />
             <button id="summary-btn">Run analysis</button>
@@ -213,7 +213,7 @@
         log.textContent = 'Requesting...';
 
         try {
-          const res = await fetch('/api/v1/summary', {
+          const res = await fetch('/v1/summary', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
