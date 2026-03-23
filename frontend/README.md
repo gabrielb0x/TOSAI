@@ -12,7 +12,7 @@ npm run dev -- --host --port 5173
 ```
 
 - URL locale: `http://localhost:5173`
-- Proxy API actif en dev sur `/v1` et `/healthz` vers `http://localhost:9000`
+- Proxy API actif en dev sur `/summary` (et `/v1` en compat) vers `http://localhost:9000`
 
 ## ⚙️ Variables optionnelles
 

@@ -52,7 +52,7 @@ func Load() Config {
 	}
 
 	if cfg.OpenAIAPIKey == "" {
-		log.Println("avertissement: OPENAI_API_KEY n'est pas défini ; l'endpoint /v1/summary renverra une erreur")
+		log.Println("avertissement: OPENAI_API_KEY n'est pas défini ; l'endpoint /summary renverra une erreur")
 	}
 
 	return cfg

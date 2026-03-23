@@ -24,7 +24,7 @@ const resolveApiBaseUrl = () => {
 
 const CONFIG = {
   apiBaseUrl: resolveApiBaseUrl(),
-  endpoint: '/v1/summary',
+  endpoint: '/summary',
   defaultUrl: '',
   labels: {
     idle: 'Pret',

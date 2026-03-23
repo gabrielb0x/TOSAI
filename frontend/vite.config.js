@@ -35,11 +35,11 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       strictPort: true,
       proxy: {
-        '/v1': {
+        '/summary': {
           target: backendTarget,
           changeOrigin: true,
         },
-        '/healthz': {
+        '/v1': {
           target: backendTarget,
           changeOrigin: true,
         },

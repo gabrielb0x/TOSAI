@@ -15,11 +15,10 @@ Le frontend est maintenant organise en 2 pages:
 
 ## ✨ Fonctionnalites
 
-- **API Go (Gin)**: endpoint principal `POST /v1/summary` sur `https://api.tosai.fr`
+- **API Go (Gin)**: endpoint principal `POST /summary` sur `https://api.tosai.fr`
 - **Extraction de contenu** depuis une URL cible
 - **Analyse OpenAI** avec sortie JSON stricte
 - **Frontend Vite** sombre, anime, responsive
-- **Page de test backend**: `/web/test.html`
 
 ---
 
@@ -35,6 +34,7 @@ Le frontend est maintenant organise en 2 pages:
 ## 📁 Arborescence utile
 
 - `backend/` → serveur API, config, schema SQL
+- `backend/README.MD` → guide de mise en place du backend, DB et service systemd
 - `frontend/` → application web (vitrine + `/tosai`)
 - `nginx.example.conf` → configuration NGINX de reference
 - `Makefile` → commandes rapides (`setup`, `dev-backend`, `dev-frontend`, `test`)
@@ -78,8 +78,7 @@ Frontend: **http://localhost:5173**
 
 - Vitrine: `http://localhost:5173/`
 - Outil: `http://localhost:5173/tosai`
-- API health: `http://localhost:9000/healthz`
-- Test API backend: `http://localhost:9000/web/test.html`
+- API summary: `curl -X POST http://localhost:9000/summary -H 'Content-Type: application/json' -d '{"url":"https://example.com/terms"}'`
 
 ---
 
@@ -222,7 +221,7 @@ Fichier prioritaire: `backend/.env`.
 
 ## 🛟 Depannage rapide
 
-- Si `/v1/summary` renvoie une erreur: verifier `OPENAI_API_KEY` dans `backend/.env`.
+- Si `/summary` renvoie une erreur: verifier `OPENAI_API_KEY` dans `backend/.env`.
 - Si `/tosai` ne charge pas en prod: verifier le `try_files` NGINX vers `/index.html`.
 - Si la DB echoue au demarrage: tester `DATABASE_URL` avec `psql` et verifier les droits `CREATE/ALTER`.
 

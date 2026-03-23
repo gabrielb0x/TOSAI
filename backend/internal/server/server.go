@@ -1,8 +1,6 @@
 package server
 
 import (
-	"net/http"
-
 	"strings"
 
 	"github.com/gin-contrib/cors"
@@ -37,21 +35,22 @@ func New(cfg config.Config, pool *pgxpool.Pool) *gin.Engine {
 	corsCfg.AllowOrigins = trimEmpty(corsCfg.AllowOrigins)
 	r.Use(cors.New(corsCfg))
 
-	r.GET("/healthz", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"status": "ok",
-		})
-	})
+	registerSummaryRoutes(r, analysisSvc)
 
 	api := r.Group("/v1")
-	{
-		api.GET("/summary", analysisSvc.handleSummaryGET)
-		api.POST("/summary", analysisSvc.handleSummaryPOST)
-	}
-
-	registerStatic(r)
+	registerSummaryRoutes(api, analysisSvc)
 
 	return r
+}
+
+type summaryRouter interface {
+	GET(string, ...gin.HandlerFunc) gin.IRoutes
+	POST(string, ...gin.HandlerFunc) gin.IRoutes
+}
+
+func registerSummaryRoutes(router summaryRouter, analysisSvc *analysisService) {
+	router.GET("/summary", analysisSvc.handleSummaryGET)
+	router.POST("/summary", analysisSvc.handleSummaryPOST)
 }
 
 func trimEmpty(values []string) []string {
