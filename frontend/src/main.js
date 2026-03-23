@@ -7,7 +7,7 @@ gsap.registerPlugin(ScrollTrigger)
 const CONFIG = {
   apiBaseUrl: import.meta.env.VITE_API_BASE_URL ?? '',
   endpoint: '/api/v1/summary',
-  defaultUrl: 'https://openai.com/policies/privacy-policy/',
+  defaultUrl: '',
   labels: {
     idle: 'Pret',
     loading: 'Analyse en cours...',

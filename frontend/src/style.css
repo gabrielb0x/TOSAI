@@ -371,7 +371,7 @@ button.menu-toggle:hover {
 .story-media {
   min-height: 26rem;
   border-radius: var(--radius-stage);
-  background: linear-gradient(180deg, #f7f9ff, #eef3fd);
+  background: linear-gradient(139deg, #ffdddd, #e9e9e9);
   box-shadow: var(--shadow-soft);
   overflow: hidden;
   position: relative;
@@ -383,11 +383,11 @@ button.menu-toggle:hover {
 }
 
 .visual-fatigue {
-  background: linear-gradient(180deg, #f5f7fb, #edf1f9);
+  background: linear-gradient(0deg, #a3c1ff, #dfdfdf);
 }
 
 .visual-usage {
-  background: linear-gradient(180deg, #f7fbf7, #eef8f1);
+  background: linear-gradient(180deg, #b1ffb1, #d7d7d7);
 }
 
 .stage,
@@ -436,10 +436,12 @@ button.menu-toggle:hover {
 }
 
 .paper-chip {
+  transform: translateY(-13.6px);
+  margin-left: -12px;
   display: inline-flex;
   align-items: center;
-  gap: 0.58rem;
-  min-height: 2.45rem;
+  gap: .4rem;
+  min-height: 2rem;
   padding: 0 0.84rem;
   border-radius: var(--radius-pill);
   background: rgba(17, 19, 26, 0.06);
@@ -472,6 +474,10 @@ button.menu-toggle:hover {
   background: rgba(17, 19, 26, 0.08);
 }
 
+.paper-lines span:nth-child(1) {
+  width: 70%;
+}
+
 .paper-lines span:nth-child(2) {
   width: 88%;
 }
@@ -484,6 +490,26 @@ button.menu-toggle:hover {
   width: 76%;
 }
 
+.paper-lines span:nth-child(5) {
+  width: 60%;
+}
+
+.paper-lines span:nth-child(6) {
+  width: 85%;
+}
+
+.paper-lines span:nth-child(7) {
+  width:95%;
+}
+
+.paper-lines span:nth-child(8) {
+  width: 80%;
+}
+
+.paper-lines span:nth-child(9) {
+  width: 100%;
+}
+
 .paper-flag,
 .timeline-note {
   display: inline-flex;
@@ -494,8 +520,10 @@ button.menu-toggle:hover {
 }
 
 .paper-flag {
+  transform: translateY(13px);
   position: absolute;
-  right: 1.25rem;
+  right: 0.5rem;
+  min-height: 2rem;
   bottom: 1.25rem;
   background: rgba(234, 67, 53, 0.14);
   color: #bd2d1f;
@@ -602,7 +630,9 @@ button.menu-toggle:hover {
 }
 
 .usage-input {
-  min-height: 3rem;
+  margin-left: -11px;
+  margin-top: -13.3px;
+  min-height: 2rem;
   display: flex;
   align-items: center;
   padding: 0 0.95rem;
