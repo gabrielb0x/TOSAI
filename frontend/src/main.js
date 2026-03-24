@@ -379,6 +379,26 @@ const buildSummaryUrl = () => {
   return new URL(CONFIG.endpoint, CONFIG.apiBaseUrl).toString()
 }
 
+const normalizeAnalyzedDomain = (value) => {
+  const rawValue = String(value || '').trim()
+  if (!rawValue) {
+    return ''
+  }
+
+  const withScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(rawValue) ? rawValue : `https://${rawValue}`
+
+  try {
+    const parsed = new URL(withScheme)
+    return parsed.hostname.trim().toLowerCase()
+  } catch {
+    return rawValue
+      .replace(/^[a-z][a-z0-9+.-]*:\/\//i, '')
+      .split(/[/?#]/, 1)[0]
+      .trim()
+      .toLowerCase()
+  }
+}
+
 class ApiRequestError extends Error {
   constructor(message, { code = '', requestId = '', detailItems = [], status = 0 } = {}) {
     super(message)
@@ -536,10 +556,13 @@ const initToolPage = () => {
 
   const setLoadingState = (loading) => {
     submitButton.disabled = loading
+    submitButton.classList.toggle('is-busy', loading)
+    submitButton.setAttribute('aria-disabled', String(loading))
     submitButton.textContent = loading ? 'Analyse...' : 'Analyser'
 
     if (retryButton) {
       retryButton.disabled = loading || !retryAllowed
+      retryButton.classList.toggle('is-busy', loading)
       retryButton.setAttribute('aria-disabled', String(retryButton.disabled))
     }
   }
@@ -568,11 +591,12 @@ const initToolPage = () => {
   }
 
   const runAnalysis = async ({ forceRefresh = false } = {}) => {
-    const urlValue = urlInput.value.trim()
-    if (!urlValue) {
+    const normalizedDomain = normalizeAnalyzedDomain(urlInput.value)
+    if (!normalizedDomain) {
       urlInput.focus()
       return
     }
+    urlInput.value = normalizedDomain
 
     hideHumanFeedback()
     setLoadingState(true)
@@ -590,7 +614,7 @@ const initToolPage = () => {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ url: urlValue, force_refresh: forceRefresh }),
+          body: JSON.stringify({ url: normalizedDomain, force_refresh: forceRefresh }),
         }),
         CONFIG.requestTimeoutMs,
       )
@@ -656,6 +680,13 @@ const initToolPage = () => {
     void runAnalysis({ forceRefresh: false })
   }
 
+  const normalizeInputValue = () => {
+    const normalizedDomain = normalizeAnalyzedDomain(urlInput.value)
+    if (normalizedDomain) {
+      urlInput.value = normalizedDomain
+    }
+  }
+
   const retryAnalysis = () => {
     if (!retryAllowed) {
       return
@@ -671,12 +702,14 @@ const initToolPage = () => {
 
   urlInput.value = CONFIG.defaultUrl
   form.addEventListener('submit', submitForm)
+  urlInput.addEventListener('blur', normalizeInputValue)
   retryButton?.addEventListener('click', retryAnalysis)
   humanButton?.addEventListener('click', requestHumanCheck)
   resetUI()
 
   addCleanup(() => {
     form.removeEventListener('submit', submitForm)
+    urlInput.removeEventListener('blur', normalizeInputValue)
     retryButton?.removeEventListener('click', retryAnalysis)
     humanButton?.removeEventListener('click', requestHumanCheck)
   })

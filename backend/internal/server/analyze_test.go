@@ -180,3 +180,58 @@ func simpleFixtureSchema() map[string]any {
 		"required": []string{"name", "items"},
 	}
 }
+
+func TestNormalizeURLAcceptsBareDomainAndDropsPath(t *testing.T) {
+	t.Parallel()
+
+	normalized, err := normalizeURL("https://example.com/terms?lang=fr")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	if normalized != "https://example.com" {
+		t.Fatalf("expected https://example.com, got %q", normalized)
+	}
+}
+
+func TestNormalizeDocumentURLKeepsTermsPath(t *testing.T) {
+	t.Parallel()
+
+	normalized, err := normalizeDocumentURL("example.com/terms?lang=fr")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	if normalized != "https://example.com/terms?lang=fr" {
+		t.Fatalf("expected path to be preserved, got %q", normalized)
+	}
+}
+
+func TestSanitizeAnalysisSetsContestableFromConfidence(t *testing.T) {
+	t.Parallel()
+
+	highConfidence := sanitizeAnalysis(summaryAnalysis{
+		Rating:         "b",
+		Summary:        "Resume utile",
+		Highlights:     []string{"Point 1"},
+		Risks:          []string{"Risque 1"},
+		Recommendation: "Lire avant d'accepter",
+		Confidence:     "high",
+		IsContestable:  true,
+	})
+	if highConfidence.IsContestable {
+		t.Fatalf("expected contestable=false when confidence is high")
+	}
+
+	lowConfidence := sanitizeAnalysis(summaryAnalysis{
+		Rating:         "c",
+		Summary:        "Resume utile",
+		Highlights:     []string{"Point 1"},
+		Risks:          []string{"Risque 1"},
+		Recommendation: "Lire avant d'accepter",
+		Confidence:     "low",
+	})
+	if !lowConfidence.IsContestable {
+		t.Fatalf("expected contestable=true when confidence is low")
+	}
+}

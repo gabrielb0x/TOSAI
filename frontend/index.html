@@ -185,7 +185,7 @@
                   <span>TOSAI Summary</span>
                 </div>
                 <div class="usage-device">
-                  <div class="usage-input">https://example.com/terms</div>
+                  <div class="usage-input">example.com</div>
                   <div class="usage-result">
                     <div class="usage-grade">B</div>
                     <div class="usage-copy">
@@ -205,7 +205,7 @@
             <div class="story-copy">
               <h3>Une lecture rapide avant de cliquer sur j'accepte.</h3>
               <ol class="example-list">
-                <li><strong>1.</strong> Tu colles l'URL d'une page de ToS ou de politique.</li>
+                <li><strong>1.</strong> Tu colles simplement le domaine du service que tu veux verifier.</li>
                 <li><strong>2.</strong> TOSAI extrait le contenu et le transforme en points cles lisibles.</li>
                 <li><strong>3.</strong> Tu recuperes une note, des risques, un resume et une recommandation.</li>
               </ol>
@@ -253,16 +253,26 @@
           <section class="tool-hero">
             <h1 class="motion-item">Analyser une page de ToS.</h1>
             <p class="motion-item">
-              Colle une URL et lis directement les bons points, les points sensibles et la note
+              Colle simplement un domaine et lis directement les bons points, les points sensibles et la note
               globale dans une interface claire et centree.
             </p>
           </section>
 
           <section class="tool-search-wrap" data-animate>
             <form id="analyze-form" class="tool-form">
-              <label for="tos-url">URL a analyser</label>
+              <label for="tos-url">Domaine a analyser</label>
               <div class="field-row">
-                <input id="tos-url" name="tos-url" type="url" placeholder="https://example.com/terms" required />
+                <input
+                  id="tos-url"
+                  name="tos-url"
+                  type="text"
+                  inputmode="url"
+                  autocapitalize="off"
+                  autocorrect="off"
+                  spellcheck="false"
+                  placeholder="example.com"
+                  required
+                />
                 <button type="submit">Analyser</button>
               </div>
             </form>

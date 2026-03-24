@@ -54,9 +54,13 @@ type summaryAnalysis struct {
 }
 
 type researchResult struct {
-	Summary     string           `json:"summary"`
-	KeyFindings []string         `json:"key_findings"`
-	Sources     []researchSource `json:"sources"`
+	TargetURL     string           `json:"target_url"`
+	TargetTitle   string           `json:"target_title"`
+	TargetContent string           `json:"target_content"`
+	Summary       string           `json:"summary"`
+	KeyFindings   []string         `json:"key_findings"`
+	Confidence    string           `json:"confidence"`
+	Sources       []researchSource `json:"sources"`
 }
 
 type researchSource struct {
@@ -71,6 +75,7 @@ type fetchedDocument struct {
 	ContentType string
 	Text        string
 	Characters  int
+	AcquiredVia string
 }
 
 type apiError struct {
@@ -197,7 +202,7 @@ func (s *analysisService) handleSummaryPOST(c *gin.Context) {
 		writeAPIError(c, (&apiError{
 			Status:  http.StatusBadRequest,
 			Code:    "invalid_json",
-			Message: "payload JSON invalide (attendu: {\"url\":\"https://...\"})",
+			Message: "payload JSON invalide (attendu: {\"url\":\"example.com\"})",
 		}).WithDetail("reason", err.Error()).WithCause(err), s.appEnv, s.debugMode)
 		return
 	}
@@ -269,6 +274,7 @@ func (s *analysisService) handleSummary(c *gin.Context, rawURL string, forceRefr
 					ContentType: cached.ContentType,
 					Text:        cached.RawText,
 					Characters:  cached.CharacterCount,
+					AcquiredVia: "cache",
 				},
 				cachedAnalysis,
 				map[string]any{
@@ -285,24 +291,9 @@ func (s *analysisService) handleSummary(c *gin.Context, rawURL string, forceRefr
 		}
 	}
 
-	doc, err := s.fetchDocument(c.Request.Context(), normalizedURL)
-	if err != nil {
-		writeAPIError(c, attachDebugPayload(err, debugPayload), s.appEnv, s.debugMode)
-		return
-	}
-
-	debugPayload["document"] = map[string]any{
-		"source_url":    doc.SourceURL,
-		"http_status":   doc.HTTPStatus,
-		"content_type":  doc.ContentType,
-		"characters":    doc.Characters,
-		"text_excerpt":  excerptText(doc.Text, 1800),
-		"force_refresh": forceRefresh,
-		"cache_enabled": pool != nil,
-	}
-
-	research, researchDebug, err := s.researchWithOpenAI(c.Request.Context(), doc)
+	research, researchDebug, err := s.researchWithOpenAI(c.Request.Context(), normalizedURL)
 	if len(researchDebug) > 0 {
+		debugPayload["web_search"] = researchDebug
 		debugPayload["research"] = researchDebug
 	}
 	if err != nil {
@@ -310,8 +301,31 @@ func (s *analysisService) handleSummary(c *gin.Context, rawURL string, forceRefr
 		return
 	}
 
-	analysis, analysisDebug, err := s.analyzeWithOpenAI(c.Request.Context(), doc, research)
+	doc, err := s.resolveTermsDocument(c.Request.Context(), normalizedURL, research)
+	if err != nil {
+		writeAPIError(c, attachDebugPayload(err, debugPayload), s.appEnv, s.debugMode)
+		return
+	}
+
+	debugPayload["document"] = map[string]any{
+		"source_url":          doc.SourceURL,
+		"http_status":         doc.HTTPStatus,
+		"content_type":        doc.ContentType,
+		"characters":          doc.Characters,
+		"acquired_via":        doc.AcquiredVia,
+		"text_excerpt":        excerptText(doc.Text, 1800),
+		"force_refresh":       forceRefresh,
+		"cache_enabled":       pool != nil,
+		"requested_domain":    normalizedURL,
+		"search_target_url":   research.TargetURL,
+		"search_confidence":   research.Confidence,
+		"search_page_title":   research.TargetTitle,
+		"search_page_excerpt": excerptText(research.TargetContent, 900),
+	}
+
+	analysis, analysisDebug, err := s.analyzeWithOpenAI(c.Request.Context(), normalizedURL, doc, research)
 	if len(analysisDebug) > 0 {
+		debugPayload["chatgpt"] = analysisDebug
 		debugPayload["analysis"] = analysisDebug
 	}
 	if err != nil {
@@ -320,7 +334,7 @@ func (s *analysisService) handleSummary(c *gin.Context, rawURL string, forceRefr
 	}
 
 	if pool != nil {
-		if err := saveCachedAnalysis(c.Request.Context(), pool, doc, research, analysis, s.model, debugPayload); err != nil {
+		if err := saveCachedAnalysis(c.Request.Context(), pool, normalizedURL, doc, research, analysis, s.model, debugPayload); err != nil {
 			log.Printf("avertissement: ecriture cache %s impossible: %v", doc.SourceURL, err)
 			debugPayload["cache_write"] = map[string]any{
 				"ok":    false,
@@ -351,7 +365,7 @@ func (s *analysisService) handleSummary(c *gin.Context, rawURL string, forceRefr
 }
 
 func (s *analysisService) fetchDocument(ctx context.Context, rawURL string) (fetchedDocument, error) {
-	normalized, err := normalizeURL(rawURL)
+	normalized, err := normalizeDocumentURL(rawURL)
 	if err != nil {
 		return fetchedDocument{}, (&apiError{
 			Status:  http.StatusBadRequest,
@@ -416,10 +430,49 @@ func (s *analysisService) fetchDocument(ctx context.Context, rawURL string) (fet
 		ContentType: resp.Header.Get("Content-Type"),
 		Text:        text,
 		Characters:  len([]rune(text)),
+		AcquiredVia: "http_fetch",
 	}, nil
 }
 
-func (s *analysisService) researchWithOpenAI(ctx context.Context, doc fetchedDocument) (researchResult, map[string]any, error) {
+func (s *analysisService) resolveTermsDocument(ctx context.Context, normalizedURL string, research researchResult) (fetchedDocument, error) {
+	targetURL := strings.TrimSpace(research.TargetURL)
+	if targetURL != "" {
+		doc, err := s.fetchDocument(ctx, targetURL)
+		if err == nil {
+			return doc, nil
+		}
+		if strings.TrimSpace(research.TargetContent) == "" {
+			return fetchedDocument{}, attachDetail(err, "search_target_url", targetURL)
+		}
+		log.Printf("avertissement: fallback contenu web search pour %s apres echec fetch %s: %v", normalizedURL, targetURL, err)
+	}
+
+	content := strings.TrimSpace(research.TargetContent)
+	if content == "" {
+		return fetchedDocument{}, (&apiError{
+			Status:  http.StatusBadGateway,
+			Code:    "terms_page_not_found",
+			Message: "impossible d'identifier une page de CGU exploitable",
+		}).WithDetail("requested_domain", normalizedURL)
+	}
+
+	sourceURL := targetURL
+	if sourceURL == "" {
+		sourceURL = normalizedURL
+	}
+
+	content = truncateRunes(content, s.maxChars)
+	return fetchedDocument{
+		SourceURL:   sourceURL,
+		HTTPStatus:  http.StatusOK,
+		ContentType: "text/plain; source=openai_web_search",
+		Text:        content,
+		Characters:  len([]rune(content)),
+		AcquiredVia: "openai_web_search_excerpt",
+	}, nil
+}
+
+func (s *analysisService) researchWithOpenAI(ctx context.Context, normalizedURL string) (researchResult, map[string]any, error) {
 	if s.apiKey == "" {
 		return researchResult{}, nil, &apiError{
 			Status:  http.StatusServiceUnavailable,
@@ -428,17 +481,28 @@ func (s *analysisService) researchWithOpenAI(ctx context.Context, doc fetchedDoc
 		}
 	}
 
-	systemPrompt := "Tu es un chercheur juridique et produit. Tu utilises obligatoirement la recherche web pour trouver des signaux publics utiles avant une analyse de CGU."
+	systemPrompt := "Tu travailles en coulisses pour le projet TOSAI. Tu ne dois jamais mentionner ce nom, ni dans le JSON ni dans tes formulations. Tu utilises obligatoirement la recherche web pour identifier la page officielle de CGU/ToS/Terms la plus pertinente pour un domaine, puis en extraire un contenu concret et fiable."
 	userPrompt := fmt.Sprintf(
-		"Effectue une recherche web recente et structuree a propos de cette URL de CGU/ToS: %s\n\nExtrait local de la page:\n%s\n\nRetourne uniquement un JSON strict qui resume les signaux externes utiles pour analyser ces CGU: reputation, litiges, dark patterns, annulation, privacy, changements notables et sources publiques pertinentes.",
-		doc.SourceURL,
-		excerptText(doc.Text, 3000),
+		"Domaine a analyser: %s\n\nUtilise la recherche web pour trouver la meilleure page officielle parmi Terms of Service, Conditions d'utilisation, CGU, Terms, User Agreement, Legal Terms ou equivalent. Priorise la page officielle du service, sur le domaine principal ou un sous-domaine officiel. Retourne uniquement un JSON strict avec l'URL cible, le titre de page, un extrait concret du contenu de la page retrouvee, un court resume, 3 a 5 constats factuels, un niveau de confiance et les sources. Ignore les elements de reputation generale qui n'aident pas a confirmer ou comprendre la page de CGU.",
+		normalizedURL,
 	)
 
 	researchSchema := map[string]any{
 		"type":                 "object",
 		"additionalProperties": false,
 		"properties": map[string]any{
+			"target_url": map[string]any{
+				"type":      "string",
+				"minLength": 8,
+			},
+			"target_title": map[string]any{
+				"type":      "string",
+				"minLength": 3,
+			},
+			"target_content": map[string]any{
+				"type":      "string",
+				"minLength": 40,
+			},
 			"summary": map[string]any{
 				"type":      "string",
 				"minLength": 20,
@@ -446,6 +510,10 @@ func (s *analysisService) researchWithOpenAI(ctx context.Context, doc fetchedDoc
 			"key_findings": map[string]any{
 				"type":  "array",
 				"items": map[string]any{"type": "string"},
+			},
+			"confidence": map[string]any{
+				"type": "string",
+				"enum": []string{"low", "medium", "high"},
 			},
 			"sources": map[string]any{
 				"type": "array",
@@ -461,7 +529,7 @@ func (s *analysisService) researchWithOpenAI(ctx context.Context, doc fetchedDoc
 				},
 			},
 		},
-		"required": []string{"summary", "key_findings", "sources"},
+		"required": []string{"target_url", "target_title", "target_content", "summary", "key_findings", "confidence", "sources"},
 	}
 
 	var research researchResult
@@ -474,7 +542,7 @@ func (s *analysisService) researchWithOpenAI(ctx context.Context, doc fetchedDoc
 		[]map[string]any{{"type": "web_search"}},
 		"tosai_research",
 		researchSchema,
-		1100,
+		1400,
 		&research,
 	)
 	if err != nil {
@@ -486,7 +554,7 @@ func (s *analysisService) researchWithOpenAI(ctx context.Context, doc fetchedDoc
 	return research, debugStep, nil
 }
 
-func (s *analysisService) analyzeWithOpenAI(ctx context.Context, doc fetchedDocument, research researchResult) (summaryAnalysis, map[string]any, error) {
+func (s *analysisService) analyzeWithOpenAI(ctx context.Context, normalizedURL string, doc fetchedDocument, research researchResult) (summaryAnalysis, map[string]any, error) {
 	if s.apiKey == "" {
 		return summaryAnalysis{}, nil, &apiError{
 			Status:  http.StatusServiceUnavailable,
@@ -495,10 +563,12 @@ func (s *analysisService) analyzeWithOpenAI(ctx context.Context, doc fetchedDocu
 		}
 	}
 
-	systemPrompt := "Tu es un auditeur juridique produit. Tu analyses des CGU/ToS et tu renvoies uniquement un JSON strict conforme au schema."
+	systemPrompt := "Tu travailles en coulisses pour le projet TOSAI. Tu ne dois jamais mentionner ce nom. Tu es un auditeur juridique produit. Tu analyses des CGU/ToS et tu renvoies uniquement un JSON strict conforme au schema, sans phrase meta."
 	userPrompt := fmt.Sprintf(
-		"Analyse en francais la page suivante.\nURL: %s\n\nContenu extrait:\n%s\n\nContexte web externe deja collecte:\n%s\n\nFournis une note globale A-E, un resume clair, les points majeurs, les risques, une recommandation utilisateur, un niveau de confiance et un booleen is_contestable. Mets is_contestable a true si l'analyse merite d'etre relancee car les CGU semblent ambiguës, incomplètes, contradictoires, possiblement changeantes ou si le contexte externe montre un doute important.",
+		"Analyse en francais la page suivante pour un utilisateur final.\nDomaine demande: %s\nURL de la page retenue: %s\nMethode de collecte: %s\n\nContenu principal a analyser:\n%s\n\nContexte issu de la recherche web:\n%s\n\nFournis une note globale A-E, un resume clair, les points majeurs, les risques, une recommandation utilisateur, un niveau de confiance et un booleen is_contestable.\nRegles:\n- Ne mentionne jamais TOSAI.\n- is_contestable doit etre false par defaut.\n- Mets is_contestable a true uniquement si tu n'es pas suffisamment certain de la veracite ou de la fiabilite de ton analyse: page possiblement non officielle, contenu trop incomplet, contradictions majeures, ou confiance faible.\n- Si tu es raisonnablement sur de toi, is_contestable doit etre false.",
+		normalizedURL,
 		doc.SourceURL,
+		doc.AcquiredVia,
 		doc.Text,
 		researchToPromptText(research),
 	)
@@ -845,6 +915,7 @@ func (s *analysisService) buildSuccessResponse(c *gin.Context, sourceURL, model 
 			"http_status":  doc.HTTPStatus,
 			"content_type": doc.ContentType,
 			"characters":   doc.Characters,
+			"source":       doc.AcquiredVia,
 		},
 		"analysis": analysis,
 		"meta":     meta,
@@ -881,6 +952,13 @@ func attachDebugPayload(err error, debugPayload map[string]any) error {
 	}).WithDebug(debugPayload)
 }
 
+func attachDetail(err error, key string, value any) error {
+	if apiErr, ok := err.(*apiError); ok {
+		return apiErr.WithDetail(key, value)
+	}
+	return err
+}
+
 func sanitizeAnalysis(input summaryAnalysis) summaryAnalysis {
 	input.Rating = strings.ToUpper(strings.TrimSpace(input.Rating))
 	switch input.Rating {
@@ -897,18 +975,37 @@ func sanitizeAnalysis(input summaryAnalysis) summaryAnalysis {
 		input.Recommendation = "Lire attentivement les clauses sensibles avant de continuer."
 	}
 	input.Confidence = strings.ToLower(strings.TrimSpace(input.Confidence))
-	if input.Confidence == "" {
+	switch input.Confidence {
+	case "low", "medium", "high":
+	default:
 		input.Confidence = "medium"
 	}
+	input.IsContestable = input.Confidence == "low"
 	input.Highlights = sanitizeList(input.Highlights)
 	input.Risks = sanitizeList(input.Risks)
 	return input
 }
 
 func sanitizeResearch(input researchResult) researchResult {
+	if normalizedTargetURL, err := normalizeDocumentURL(input.TargetURL); err == nil {
+		input.TargetURL = normalizedTargetURL
+	} else {
+		input.TargetURL = strings.TrimSpace(input.TargetURL)
+	}
+	input.TargetTitle = strings.TrimSpace(input.TargetTitle)
+	if input.TargetTitle == "" {
+		input.TargetTitle = "Page de CGU identifiee"
+	}
+	input.TargetContent = strings.TrimSpace(input.TargetContent)
 	input.Summary = strings.TrimSpace(input.Summary)
 	if input.Summary == "" {
-		input.Summary = "Aucune recherche externe exploitable."
+		input.Summary = "Aucune page de CGU clairement exploitable n'a ete retrouvee."
+	}
+	input.Confidence = strings.ToLower(strings.TrimSpace(input.Confidence))
+	switch input.Confidence {
+	case "low", "medium", "high":
+	default:
+		input.Confidence = "medium"
 	}
 	input.KeyFindings = sanitizeList(input.KeyFindings)
 	input.Sources = sanitizeSources(input.Sources)
@@ -954,7 +1051,17 @@ func sanitizeSources(items []researchSource) []researchSource {
 
 func researchToPromptText(research researchResult) string {
 	var builder strings.Builder
-	builder.WriteString("Resume: ")
+	builder.WriteString("Page cible: ")
+	builder.WriteString(strings.TrimSpace(research.TargetTitle))
+	if research.TargetURL != "" {
+		builder.WriteString(" ")
+		builder.WriteString(strings.TrimSpace(research.TargetURL))
+	}
+	builder.WriteString("\nConfiance recherche: ")
+	builder.WriteString(strings.TrimSpace(research.Confidence))
+	builder.WriteString("\n\nExtrait retrouve:\n")
+	builder.WriteString(strings.TrimSpace(research.TargetContent))
+	builder.WriteString("\n\nResume: ")
 	builder.WriteString(strings.TrimSpace(research.Summary))
 	builder.WriteString("\n\nPoints cles:\n")
 	for _, finding := range sanitizeList(research.KeyFindings) {
@@ -992,17 +1099,54 @@ func isTruthy(value string) bool {
 }
 
 func normalizeURL(raw string) (string, error) {
-	parsed, err := neturl.Parse(strings.TrimSpace(raw))
+	parsed, err := parseLooseURL(raw)
 	if err != nil {
 		return "", fmt.Errorf("URL invalide")
 	}
-	if parsed.Scheme != "http" && parsed.Scheme != "https" {
-		return "", fmt.Errorf("URL invalide: seul http/https est accepte")
+
+	host := strings.ToLower(strings.TrimSpace(parsed.Hostname()))
+	if host == "" {
+		return "", fmt.Errorf("URL invalide: domaine manquant")
 	}
+	return "https://" + host, nil
+}
+
+func normalizeDocumentURL(raw string) (string, error) {
+	parsed, err := parseLooseURL(raw)
+	if err != nil {
+		return "", fmt.Errorf("URL invalide")
+	}
+
 	if parsed.Host == "" {
 		return "", fmt.Errorf("URL invalide: domaine manquant")
 	}
+
+	parsed.User = nil
+	parsed.Fragment = ""
+	if parsed.Scheme == "" {
+		parsed.Scheme = "https"
+	}
 	return parsed.String(), nil
+}
+
+func parseLooseURL(raw string) (*neturl.URL, error) {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return nil, fmt.Errorf("URL invalide")
+	}
+
+	if !strings.Contains(trimmed, "://") {
+		trimmed = "https://" + trimmed
+	}
+
+	parsed, err := neturl.Parse(trimmed)
+	if err != nil {
+		return nil, err
+	}
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		return nil, fmt.Errorf("URL invalide: seul http/https est accepte")
+	}
+	return parsed, nil
 }
 
 func extractPlainText(contentType string, body []byte) string {

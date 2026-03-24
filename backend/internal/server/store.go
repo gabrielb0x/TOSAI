@@ -120,14 +120,14 @@ func loadCachedAnalysis(ctx context.Context, pool *pgxpool.Pool, normalizedURL s
 	return record, nil
 }
 
-func saveCachedAnalysis(ctx context.Context, pool *pgxpool.Pool, doc fetchedDocument, research researchResult, analysis summaryAnalysis, model string, debug map[string]any) error {
+func saveCachedAnalysis(ctx context.Context, pool *pgxpool.Pool, normalizedURL string, doc fetchedDocument, research researchResult, analysis summaryAnalysis, model string, debug map[string]any) error {
 	if pool == nil {
 		return nil
 	}
 
-	parsedURL, err := neturl.Parse(doc.SourceURL)
+	parsedURL, err := neturl.Parse(normalizedURL)
 	if err != nil {
-		return fmt.Errorf("parse source url for cache: %w", err)
+		return fmt.Errorf("parse normalized url for cache: %w", err)
 	}
 
 	researchJSON, err := marshalJSONB(research)
@@ -176,7 +176,7 @@ func saveCachedAnalysis(ctx context.Context, pool *pgxpool.Pool, doc fetchedDocu
 			analysis_json = EXCLUDED.analysis_json,
 			debug_json = EXCLUDED.debug_json
 	`,
-		doc.SourceURL,
+		normalizedURL,
 		doc.SourceURL,
 		parsedURL.Hostname(),
 		doc.HTTPStatus,

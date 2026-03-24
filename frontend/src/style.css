@@ -331,6 +331,17 @@ button.btn-outline {
   color: var(--ink);
 }
 
+button.is-busy,
+.btn.is-busy {
+  cursor: not-allowed;
+  transform: none;
+  opacity: 0.52;
+  border-color: rgba(17, 19, 26, 0.08);
+  background: rgba(17, 19, 26, 0.06);
+  color: rgba(17, 19, 26, 0.42);
+  box-shadow: none;
+}
+
 button.menu-toggle {
   width: 2.9rem;
   min-height: 2.9rem;
@@ -770,6 +781,7 @@ button[aria-disabled='true'] {
   width: min(940px, 100%);
 }
 
+input[type='text'],
 input[type='url'] {
   width: 100%;
   min-height: 3.45rem;
@@ -780,10 +792,12 @@ input[type='url'] {
   color: var(--ink);
 }
 
+input[type='text']::placeholder,
 input[type='url']::placeholder {
   color: #8a90a0;
 }
 
+input[type='text']:focus,
 input[type='url']:focus {
   outline: none;
   border-color: rgba(66, 133, 244, 0.4);
