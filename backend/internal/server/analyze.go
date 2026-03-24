@@ -28,6 +28,7 @@ type analysisService struct {
 	model    string
 	baseURL  string
 	maxChars int
+	appEnv   string
 }
 
 type summaryRequest struct {
@@ -55,10 +56,36 @@ type apiError struct {
 	Status  int
 	Code    string
 	Message string
+	Details map[string]any
+	Err     error
 }
 
 func (e *apiError) Error() string {
 	return e.Message
+}
+
+func (e *apiError) WithDetail(key string, value any) *apiError {
+	if e == nil || strings.TrimSpace(key) == "" || value == nil {
+		return e
+	}
+
+	if text, ok := value.(string); ok && strings.TrimSpace(text) == "" {
+		return e
+	}
+
+	if e.Details == nil {
+		e.Details = map[string]any{}
+	}
+	e.Details[key] = value
+	return e
+}
+
+func (e *apiError) WithCause(err error) *apiError {
+	if e == nil || err == nil {
+		return e
+	}
+	e.Err = err
+	return e
 }
 
 type openAIResponsesResponse struct {
@@ -87,7 +114,7 @@ func newAnalysisService(cfg config.Config) *analysisService {
 
 	model := strings.TrimSpace(cfg.OpenAIModel)
 	if model == "" {
-		model = "gpt-4.1-mini"
+		model = "gpt-5-nano"
 	}
 
 	baseURL := strings.TrimRight(strings.TrimSpace(cfg.OpenAIBaseURL), "/")
@@ -103,6 +130,7 @@ func newAnalysisService(cfg config.Config) *analysisService {
 		model:    model,
 		baseURL:  baseURL,
 		maxChars: maxChars,
+		appEnv:   strings.TrimSpace(cfg.AppEnv),
 	}
 }
 
@@ -113,11 +141,11 @@ func (s *analysisService) handleSummaryGET(c *gin.Context) {
 func (s *analysisService) handleSummaryPOST(c *gin.Context) {
 	var req summaryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		writeAPIError(c, &apiError{
+		writeAPIError(c, (&apiError{
 			Status:  http.StatusBadRequest,
 			Code:    "invalid_json",
 			Message: "payload JSON invalide (attendu: {\"url\":\"https://...\"})",
-		})
+		}).WithDetail("reason", err.Error()).WithCause(err), s.appEnv)
 		return
 	}
 	s.handleSummary(c, req.URL)
@@ -130,24 +158,26 @@ func (s *analysisService) handleSummary(c *gin.Context, rawURL string) {
 			Status:  http.StatusBadRequest,
 			Code:    "missing_url",
 			Message: "parametre url obligatoire",
-		})
+		}, s.appEnv)
 		return
 	}
+	c.Set(analysisTargetURLContextKey, target)
 
 	doc, err := s.fetchDocument(c.Request.Context(), target)
 	if err != nil {
-		writeAPIError(c, err)
+		writeAPIError(c, err, s.appEnv)
 		return
 	}
 
 	analysis, err := s.analyzeWithOpenAI(c.Request.Context(), doc)
 	if err != nil {
-		writeAPIError(c, err)
+		writeAPIError(c, err, s.appEnv)
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"status":       "ok",
+		"request_id":   getRequestID(c),
 		"source_url":   doc.SourceURL,
 		"model":        s.model,
 		"generated_at": time.Now().UTC().Format(time.RFC3339),
@@ -163,58 +193,60 @@ func (s *analysisService) handleSummary(c *gin.Context, rawURL string) {
 func (s *analysisService) fetchDocument(ctx context.Context, rawURL string) (fetchedDocument, error) {
 	normalized, err := normalizeURL(rawURL)
 	if err != nil {
-		return fetchedDocument{}, &apiError{
+		return fetchedDocument{}, (&apiError{
 			Status:  http.StatusBadRequest,
 			Code:    "invalid_url",
 			Message: err.Error(),
-		}
+		}).WithDetail("raw_url", strings.TrimSpace(rawURL)).WithCause(err)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, normalized, nil)
 	if err != nil {
-		return fetchedDocument{}, &apiError{
+		return fetchedDocument{}, (&apiError{
 			Status:  http.StatusBadRequest,
 			Code:    "invalid_url",
 			Message: "impossible de construire la requete cible",
-		}
+		}).WithDetail("url", normalized).WithDetail("reason", err.Error()).WithCause(err)
 	}
 	req.Header.Set("User-Agent", "TOSAI/0.1 (+https://tosai.local)")
 	req.Header.Set("Accept", "text/html,text/plain;q=0.9,*/*;q=0.1")
 
 	resp, err := s.client.Do(req)
 	if err != nil {
-		return fetchedDocument{}, &apiError{
+		return fetchedDocument{}, (&apiError{
 			Status:  http.StatusBadGateway,
 			Code:    "fetch_failed",
 			Message: "impossible de recuperer la page cible",
-		}
+		}).WithDetail("url", normalized).WithDetail("reason", err.Error()).WithCause(err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(io.LimitReader(resp.Body, maxFetchedBytes))
 	if err != nil {
-		return fetchedDocument{}, &apiError{
+		return fetchedDocument{}, (&apiError{
 			Status:  http.StatusBadGateway,
 			Code:    "fetch_read_failed",
 			Message: "lecture du contenu cible impossible",
-		}
+		}).WithDetail("url", normalized).WithDetail("reason", err.Error()).WithCause(err)
 	}
 
 	if resp.StatusCode >= http.StatusBadRequest {
-		return fetchedDocument{}, &apiError{
+		return fetchedDocument{}, (&apiError{
 			Status:  http.StatusBadGateway,
 			Code:    "upstream_http_error",
 			Message: fmt.Sprintf("le site distant a repondu avec HTTP %d", resp.StatusCode),
-		}
+		}).WithDetail("url", normalized).
+			WithDetail("upstream_status", resp.StatusCode).
+			WithDetail("response_excerpt", excerptText(string(body), 220))
 	}
 
 	text := extractPlainText(resp.Header.Get("Content-Type"), body)
 	if text == "" {
-		return fetchedDocument{}, &apiError{
+		return fetchedDocument{}, (&apiError{
 			Status:  http.StatusUnprocessableEntity,
 			Code:    "empty_content",
 			Message: "contenu inutilisable apres extraction de texte",
-		}
+		}).WithDetail("url", normalized).WithDetail("content_type", resp.Header.Get("Content-Type"))
 	}
 
 	text = truncateRunes(text, s.maxChars)
@@ -301,58 +333,61 @@ func (s *analysisService) analyzeWithOpenAI(ctx context.Context, doc fetchedDocu
 
 	requestBody, err := json.Marshal(payload)
 	if err != nil {
-		return summaryAnalysis{}, &apiError{
+		return summaryAnalysis{}, (&apiError{
 			Status:  http.StatusInternalServerError,
 			Code:    "openai_payload_error",
 			Message: "impossible de construire la requete OpenAI",
-		}
+		}).WithDetail("reason", err.Error()).WithCause(err)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.baseURL+"/responses", bytes.NewReader(requestBody))
 	if err != nil {
-		return summaryAnalysis{}, &apiError{
+		return summaryAnalysis{}, (&apiError{
 			Status:  http.StatusInternalServerError,
 			Code:    "openai_request_error",
 			Message: "impossible de creer la requete OpenAI",
-		}
+		}).WithDetail("reason", err.Error()).WithCause(err)
 	}
 	req.Header.Set("Authorization", "Bearer "+s.apiKey)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := s.client.Do(req)
 	if err != nil {
-		return summaryAnalysis{}, &apiError{
+		return summaryAnalysis{}, (&apiError{
 			Status:  http.StatusBadGateway,
 			Code:    "openai_unreachable",
 			Message: "impossible de contacter OpenAI",
-		}
+		}).WithDetail("base_url", s.baseURL).WithDetail("reason", err.Error()).WithCause(err)
 	}
 	defer resp.Body.Close()
 
 	responseBody, err := io.ReadAll(io.LimitReader(resp.Body, maxFetchedBytes))
 	if err != nil {
-		return summaryAnalysis{}, &apiError{
+		return summaryAnalysis{}, (&apiError{
 			Status:  http.StatusBadGateway,
 			Code:    "openai_read_error",
 			Message: "lecture de la reponse OpenAI impossible",
-		}
+		}).WithDetail("base_url", s.baseURL).WithDetail("reason", err.Error()).WithCause(err)
 	}
 
 	if resp.StatusCode >= http.StatusBadRequest {
-		return summaryAnalysis{}, &apiError{
+		return summaryAnalysis{}, (&apiError{
 			Status:  http.StatusBadGateway,
 			Code:    "openai_http_error",
 			Message: fmt.Sprintf("OpenAI a repondu HTTP %d: %s", resp.StatusCode, extractOpenAIErrorMessage(responseBody)),
-		}
+		}).WithDetail("upstream_status", resp.StatusCode).
+			WithDetail("response_excerpt", excerptText(string(responseBody), 220))
 	}
 
 	var parsed openAIResponsesResponse
 	if err := json.Unmarshal(responseBody, &parsed); err != nil {
-		return summaryAnalysis{}, &apiError{
+		return summaryAnalysis{}, (&apiError{
 			Status:  http.StatusBadGateway,
 			Code:    "openai_parse_error",
 			Message: "reponse OpenAI invalide",
-		}
+		}).WithDetail("reason", err.Error()).
+			WithDetail("response_excerpt", excerptText(string(responseBody), 220)).
+			WithCause(err)
 	}
 	if parsed.Error != nil && parsed.Error.Message != "" {
 		return summaryAnalysis{}, &apiError{
@@ -367,32 +402,41 @@ func (s *analysisService) analyzeWithOpenAI(ctx context.Context, doc fetchedDocu
 		rawJSON = strings.TrimSpace(extractTextFromOutput(parsed.Output))
 	}
 	if rawJSON == "" {
-		return summaryAnalysis{}, &apiError{
+		return summaryAnalysis{}, (&apiError{
 			Status:  http.StatusBadGateway,
 			Code:    "openai_empty_output",
 			Message: "OpenAI n'a renvoye aucun contenu exploitable",
-		}
+		}).WithDetail("response_excerpt", excerptText(string(responseBody), 220))
 	}
 
 	var analysis summaryAnalysis
 	if err := json.Unmarshal([]byte(rawJSON), &analysis); err != nil {
-		return summaryAnalysis{}, &apiError{
+		return summaryAnalysis{}, (&apiError{
 			Status:  http.StatusBadGateway,
 			Code:    "openai_output_invalid",
 			Message: "OpenAI n'a pas renvoye le JSON attendu",
-		}
+		}).WithDetail("reason", err.Error()).
+			WithDetail("response_excerpt", excerptText(rawJSON, 220)).
+			WithCause(err)
 	}
 
 	analysis = sanitizeAnalysis(analysis)
 	return analysis, nil
 }
 
-func writeAPIError(c *gin.Context, err error) {
+func writeAPIError(c *gin.Context, err error, appEnv string) {
 	if err == nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"status":  "error",
-			"code":    "unknown",
-			"message": "erreur inconnue",
+		apiErr := &apiError{
+			Status:  http.StatusInternalServerError,
+			Code:    "unknown",
+			Message: "erreur inconnue",
+		}
+		logAPIError(c, apiErr)
+		c.JSON(apiErr.Status, gin.H{
+			"status":     "error",
+			"code":       apiErr.Code,
+			"message":    apiErr.Message,
+			"request_id": getRequestID(c),
 		})
 		return
 	}
@@ -400,17 +444,26 @@ func writeAPIError(c *gin.Context, err error) {
 	apiErr := &apiError{
 		Status:  http.StatusInternalServerError,
 		Code:    "internal_error",
-		Message: err.Error(),
+		Message: "erreur interne du serveur",
+		Err:     err,
 	}
 	if typed, ok := err.(*apiError); ok {
 		apiErr = typed
 	}
 
-	c.JSON(apiErr.Status, gin.H{
-		"status":  "error",
-		"code":    apiErr.Code,
-		"message": apiErr.Message,
-	})
+	logAPIError(c, apiErr)
+
+	payload := gin.H{
+		"status":     "error",
+		"code":       apiErr.Code,
+		"message":    apiErr.Message,
+		"request_id": getRequestID(c),
+	}
+	if shouldExposeErrorDetails(appEnv) && len(apiErr.Details) > 0 {
+		payload["details"] = apiErr.Details
+	}
+
+	c.JSON(apiErr.Status, payload)
 }
 
 func sanitizeAnalysis(input summaryAnalysis) summaryAnalysis {
@@ -566,4 +619,20 @@ func extractOpenAIErrorMessage(body []byte) string {
 		return "erreur inconnue"
 	}
 	return message
+}
+
+func excerptText(value string, max int) string {
+	cleaned := normalizeWhitespace(strings.TrimSpace(value))
+	if cleaned == "" {
+		return ""
+	}
+	if max <= 0 {
+		return cleaned
+	}
+
+	runes := []rune(cleaned)
+	if len(runes) <= max {
+		return cleaned
+	}
+	return string(runes[:max]) + "..."
 }

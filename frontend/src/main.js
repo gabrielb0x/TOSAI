@@ -24,7 +24,7 @@ const resolveApiBaseUrl = () => {
 
 const CONFIG = {
   apiBaseUrl: resolveApiBaseUrl(),
-  endpoint: '/summary',
+  endpoint: '/v1/summary',
   defaultUrl: '',
   labels: {
     idle: 'Pret',
@@ -379,6 +379,83 @@ const buildSummaryUrl = () => {
   return new URL(CONFIG.endpoint, CONFIG.apiBaseUrl).toString()
 }
 
+class ApiRequestError extends Error {
+  constructor(message, { code = '', requestId = '', detailItems = [], status = 0 } = {}) {
+    super(message)
+    this.name = 'ApiRequestError'
+    this.code = code
+    this.requestId = requestId
+    this.detailItems = detailItems
+    this.status = status
+  }
+}
+
+const humanizeKey = (value) =>
+  String(value || '')
+    .replaceAll('_', ' ')
+    .trim()
+
+const stringifyDetailValue = (value) => {
+  if (value == null) {
+    return ''
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) => stringifyDetailValue(item)).filter(Boolean).join(', ')
+  }
+
+  if (typeof value === 'object') {
+    return Object.entries(value)
+      .map(([key, item]) => {
+        const formatted = stringifyDetailValue(item)
+        return formatted ? `${humanizeKey(key)}: ${formatted}` : ''
+      })
+      .filter(Boolean)
+      .join(', ')
+  }
+
+  return String(value).trim()
+}
+
+const extractApiErrorDetailItems = (payload, status) => {
+  const items = []
+
+  if (payload && typeof payload === 'object') {
+    if (payload.code) {
+      items.push(`Code API: ${payload.code}`)
+    }
+
+    if (payload.details && typeof payload.details === 'object') {
+      Object.entries(payload.details).forEach(([key, value]) => {
+        const formatted = stringifyDetailValue(value)
+        if (formatted) {
+          items.push(`${humanizeKey(key)}: ${formatted}`)
+        }
+      })
+    }
+  }
+
+  if (items.length === 0 && status) {
+    items.push(`HTTP ${status}`)
+  }
+
+  return items
+}
+
+const buildApiRequestError = (response, payload) => {
+  const message =
+    payload && typeof payload === 'object' && typeof payload.message === 'string' && payload.message.trim()
+      ? payload.message.trim()
+      : `HTTP ${response.status}`
+
+  return new ApiRequestError(message, {
+    code: payload && typeof payload === 'object' && payload.code ? String(payload.code) : '',
+    requestId: payload && typeof payload === 'object' && payload.request_id ? String(payload.request_id) : '',
+    detailItems: extractApiErrorDetailItems(payload, response.status),
+    status: response.status,
+  })
+}
+
 const extractSummary = (payload) => {
   if (!payload || typeof payload !== 'object') {
     return {
@@ -518,6 +595,10 @@ const initToolPage = () => {
         payload = text
       }
 
+      if (!response.ok) {
+        throw buildApiRequestError(response, payload)
+      }
+
       const { rating: ratingValue, summary: summaryValue, highlights: highlightsValue, risks: risksValue } =
         extractSummary(payload)
 
@@ -527,18 +608,28 @@ const initToolPage = () => {
         highlightsValue,
         risksValue,
       })
-
-      if (!response.ok) {
-        const message = payload && typeof payload === 'object' ? payload.message : null
-        throw new Error(message || `HTTP ${response.status}`)
-      }
     } catch (error) {
+      const message = error instanceof Error && error.message ? error.message : "Impossible de contacter l'API."
+      const detailItems =
+        error instanceof ApiRequestError && error.detailItems.length > 0
+          ? error.detailItems
+          : ['La requete a echoue ou le backend est indisponible.']
+      const highlightItems = ['Verifie les logs du backend si le probleme persiste.']
+
+      if (error instanceof ApiRequestError && error.status) {
+        highlightItems.unshift(`HTTP ${error.status}`)
+      }
+
       updateResult({
         ratingValue: '-',
-        summaryValue: "Impossible de contacter l'API pour le moment.",
-        highlightsValue: ['Aucune donnee exploitable disponible.'],
-        risksValue: ['La requete a echoue ou le backend est indisponible.'],
+        summaryValue: message,
+        highlightsValue: highlightItems,
+        risksValue: detailItems,
       })
+
+      if (error instanceof ApiRequestError && error.requestId) {
+        showHumanFeedback(`Request ID backend: ${error.requestId}`)
+      }
     } finally {
       setLoadingState(false)
     }

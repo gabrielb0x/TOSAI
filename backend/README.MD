@@ -2,9 +2,10 @@
 
 Ce dossier contient le backend Go de TOSAI. Il expose maintenant une API simple:
 
-- route principale: `POST /summary`
-- lecture rapide: `GET /summary?url=https://example.com/terms`
-- alias de compatibilite: `/v1/summary`
+- racine API versionnee: `GET /v1/`
+- route principale: `POST /v1/summary`
+- lecture rapide: `GET /v1/summary?url=https://example.com/terms`
+- alias de compatibilite conserve: `/summary`
 
 Il n'y a plus de route `/healthz` ni de page web embarquee dans le backend. Le processus a lancer est simplement le serveur API.
 
@@ -34,6 +35,26 @@ OPENAI_API_KEY=sk-...
 
 Si `DATABASE_URL` est vide, le backend demarre en mode API-only, sans PostgreSQL.
 
+Si vous voulez preparer PostgreSQL en une commande:
+
+```bash
+cd /opt/tosai
+make db-init
+```
+
+ou directement:
+
+```bash
+./scripts/init_db.sh
+```
+
+Le script:
+
+- cree le role PostgreSQL si besoin
+- cree la base si besoin
+- applique `config/database_init.sql`
+- renseigne `DATABASE_URL` dans `backend/.env`
+
 ## Variables d'environnement
 
 Le backend charge en priorite `backend/.env`, puis `backend/config/.env`.
@@ -43,11 +64,13 @@ Le backend charge en priorite `backend/.env`, puis `backend/config/.env`.
 - `DATABASE_URL`: URL PostgreSQL complete
 - `CORS_ORIGINS`: liste CSV des origines autorisees
 - `ADMIN_API_TOKEN`: reserve pour des endpoints admin
-- `OPENAI_API_KEY`: obligatoire pour `/summary`
-- `OPENAI_MODEL`: defaut `gpt-4.1-mini`
+- `OPENAI_API_KEY`: obligatoire pour `/v1/summary`
+- `OPENAI_MODEL`: defaut `gpt-5-nano`
 - `OPENAI_BASE_URL`: defaut `https://api.openai.com/v1`
 - `HTTP_TIMEOUT_SECONDS`: timeout reseau global
 - `ANALYSIS_INPUT_MAX_CHARS`: taille max du texte envoye a OpenAI
+- `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD` / `DB_SSLMODE`: utilises par `./scripts/init_db.sh`
+- `POSTGRES_ADMIN_URL`: connexion admin optionnelle pour `./scripts/init_db.sh` si vous ne voulez pas utiliser `sudo -u postgres`
 
 Exemple complet:
 
@@ -55,7 +78,7 @@ Exemple complet:
 APP_ENV=prod
 APP_PORT=9000
 OPENAI_API_KEY=sk-...
-OPENAI_MODEL=gpt-4.1-mini
+OPENAI_MODEL=gpt-5-nano
 OPENAI_BASE_URL=https://api.openai.com/v1
 DATABASE_URL=postgres://tosai_app:change-me@127.0.0.1:5432/tosai?sslmode=disable
 CORS_ORIGINS=https://tosai.fr,https://www.tosai.fr
@@ -67,40 +90,35 @@ ANALYSIS_INPUT_MAX_CHARS=12000
 
 Le backend applique automatiquement le schema embarque depuis `config/database_init.sql` au demarrage, si `DATABASE_URL` est defini et valide.
 
-### 1. Creer un role et une base
-
-Exemple sur un serveur Linux avec PostgreSQL local:
+Le plus simple est maintenant:
 
 ```bash
-sudo -u postgres psql <<'SQL'
-CREATE ROLE tosai_app LOGIN PASSWORD 'change-me';
-CREATE DATABASE tosai OWNER tosai_app;
-SQL
+cd /opt/tosai
+make db-init
 ```
 
-### 2. Donner l'extension si necessaire
-
-Le schema utilise `pgcrypto`. Si votre utilisateur n'a pas le droit de creer les extensions, faites-le une fois avec un compte admin:
-
-```bash
-sudo -u postgres psql -d tosai -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;"
-```
-
-### 3. Configurer `DATABASE_URL`
+Par defaut, le script utilise:
 
 ```env
-DATABASE_URL=postgres://tosai_app:change-me@127.0.0.1:5432/tosai?sslmode=disable
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_NAME=tosai
+DB_USER=tosai_app
+DB_PASSWORD=change-me
+DB_SSLMODE=disable
 ```
 
-### 4. Demarrer le backend
+Workflow:
 
-Au premier demarrage valide:
+- si `backend/.env` manque, il est cree depuis `.env.example`
+- le script cree/met a jour le role applicatif
+- le script cree la base si besoin
+- le schema SQL est applique
+- `DATABASE_URL` est ecrit dans `backend/.env`
 
-- connexion PostgreSQL
-- `Ping`
-- application automatique du schema SQL
+Le script essaie d'abord `POSTGRES_ADMIN_URL` si vous l'avez defini, sinon il passe par `sudo -u postgres psql`.
 
-Si la connexion echoue, le backend continue de demarrer sans DB. Cela permet un mode API-only, mais aucune persistance PostgreSQL n'est alors disponible.
+Si la connexion echoue au demarrage du backend, le serveur continue en mode API-only. Cela permet un mode sans DB, mais aucune persistance PostgreSQL n'est alors disponible.
 
 ## Build production
 
@@ -163,7 +181,7 @@ Resultat:
 ### POST
 
 ```bash
-curl -X POST http://127.0.0.1:9000/summary \
+curl -X POST http://127.0.0.1:9000/v1/summary \
   -H 'Content-Type: application/json' \
   -d '{"url":"https://example.com/terms"}'
 ```
@@ -171,7 +189,13 @@ curl -X POST http://127.0.0.1:9000/summary \
 ### GET
 
 ```bash
-curl 'http://127.0.0.1:9000/summary?url=https://example.com/terms'
+curl 'http://127.0.0.1:9000/v1/summary?url=https://example.com/terms'
+```
+
+### Racine API
+
+```bash
+curl 'http://127.0.0.1:9000/v1/'
 ```
 
 ## Reverse proxy conseille
@@ -190,3 +214,4 @@ Le fichier `../nginx.example.conf` peut servir de base.
 - `fetch_failed`: la page cible n'est pas accessible depuis le serveur
 - `openai_http_error`: verifier cle, modele, quota ou proxy OpenAI
 - erreur SQL au boot: verifier `DATABASE_URL`, droits de l'utilisateur et extension `pgcrypto`
+- chaque erreur API renvoie maintenant un `request_id`; utilisez-le pour retrouver la ligne `api_error ...` dans les logs backend

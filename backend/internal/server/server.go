@@ -15,6 +15,7 @@ func New(cfg config.Config, pool *pgxpool.Pool) *gin.Engine {
 	r := gin.Default()
 	analysisSvc := newAnalysisService(cfg)
 
+	r.Use(requestIDMiddleware())
 	r.Use(func(c *gin.Context) {
 		if pool != nil {
 			c.Set("db", pool)
@@ -35,10 +36,12 @@ func New(cfg config.Config, pool *pgxpool.Pool) *gin.Engine {
 	corsCfg.AllowOrigins = trimEmpty(corsCfg.AllowOrigins)
 	r.Use(cors.New(corsCfg))
 
-	registerSummaryRoutes(r, analysisSvc)
-
 	api := r.Group("/v1")
+	api.GET("", handleAPIRoot)
+	api.GET("/", handleAPIRoot)
 	registerSummaryRoutes(api, analysisSvc)
+
+	registerSummaryRoutes(r, analysisSvc)
 
 	return r
 }

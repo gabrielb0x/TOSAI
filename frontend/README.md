@@ -12,7 +12,7 @@ npm run dev -- --host --port 5173
 ```
 
 - URL locale: `http://localhost:5173`
-- Proxy API actif en dev sur `/summary` (et `/v1` en compat) vers `http://localhost:9000`
+- Proxy API actif en dev sur `/v1` vers `http://localhost:9000`
 
 ## ⚙️ Variables optionnelles
 
@@ -21,6 +21,8 @@ npm run dev -- --host --port 5173
 - `VITE_MASK_BUILD_FILENAMES` -> `true` pour masquer les noms en build
 
 Sans `VITE_API_BASE_URL`, le frontend utilise automatiquement `https://api.tosai.fr` lorsqu'il tourne sur `tosai.fr` ou `www.tosai.fr`.
+
+L'outil appelle l'endpoint versionne `https://api.tosai.fr/v1/summary`.
 
 Exemple:
 

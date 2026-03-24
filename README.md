@@ -15,7 +15,7 @@ Le frontend est maintenant organise en 2 pages:
 
 ## ✨ Fonctionnalites
 
-- **API Go (Gin)**: endpoint principal `POST /summary` sur `https://api.tosai.fr`
+- **API Go (Gin)**: endpoint principal `POST /v1/summary` sur `https://api.tosai.fr`
 - **Extraction de contenu** depuis une URL cible
 - **Analyse OpenAI** avec sortie JSON stricte
 - **Frontend Vite** sombre, anime, responsive
@@ -56,6 +56,12 @@ Puis editez `backend/.env` et renseignez au minimum:
 OPENAI_API_KEY=sk-...
 ```
 
+Si vous voulez la base locale tout de suite:
+
+```bash
+make db-init
+```
+
 ### 2) Lancer le backend
 
 ```bash
@@ -78,7 +84,8 @@ Frontend: **http://localhost:5173**
 
 - Vitrine: `http://localhost:5173/`
 - Outil: `http://localhost:5173/tosai`
-- API summary: `curl -X POST http://localhost:9000/summary -H 'Content-Type: application/json' -d '{"url":"https://example.com/terms"}'`
+- API summary: `curl -X POST http://localhost:9000/v1/summary -H 'Content-Type: application/json' -d '{"url":"https://example.com/terms"}'`
+- API root: `curl http://localhost:9000/v1/`
 
 ---
 
@@ -117,6 +124,14 @@ OPENAI_API_KEY=sk-...
 DATABASE_URL=postgres://tosai_app:motdepasse@127.0.0.1:5432/tosai?sslmode=disable
 CORS_ORIGINS=https://tosai.fr,https://www.tosai.fr
 ```
+
+Pour preparer PostgreSQL automatiquement sur une machine locale:
+
+```bash
+make db-init
+```
+
+Le script `backend/scripts/init_db.sh` cree le role, la base, applique le schema et renseigne `DATABASE_URL` dans `backend/.env`.
 
 ### 4) Build backend + frontend
 
@@ -202,7 +217,7 @@ Fichier prioritaire: `backend/.env`.
 - `CORS_ORIGINS` (liste CSV ou `*`)
 - `ADMIN_API_TOKEN`
 - `OPENAI_API_KEY` (**obligatoire pour l'analyse**)
-- `OPENAI_MODEL` (defaut `gpt-4.1-mini`)
+- `OPENAI_MODEL` (defaut `gpt-5-nano`)
 - `OPENAI_BASE_URL` (defaut `https://api.openai.com/v1`)
 - `HTTP_TIMEOUT_SECONDS` (defaut `25`)
 - `ANALYSIS_INPUT_MAX_CHARS` (defaut `12000`)
@@ -221,9 +236,9 @@ Fichier prioritaire: `backend/.env`.
 
 ## 🛟 Depannage rapide
 
-- Si `/summary` renvoie une erreur: verifier `OPENAI_API_KEY` dans `backend/.env`.
 - Si `/tosai` ne charge pas en prod: verifier le `try_files` NGINX vers `/index.html`.
 - Si la DB echoue au demarrage: tester `DATABASE_URL` avec `psql` et verifier les droits `CREATE/ALTER`.
+- Si `/v1/summary` renvoie une erreur: regardez le `request_id` dans la reponse puis retrouvez la ligne `api_error` correspondante dans les logs backend.
 
 ---
 

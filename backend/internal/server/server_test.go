@@ -32,9 +32,14 @@ func TestSummaryRouteAvailableAtRoot(t *testing.T) {
 	if payload["code"] != "missing_url" {
 		t.Fatalf("expected code missing_url, got %#v", payload["code"])
 	}
+
+	requestID, ok := payload["request_id"].(string)
+	if !ok || requestID == "" {
+		t.Fatalf("expected request_id in response, got %#v", payload["request_id"])
+	}
 }
 
-func TestSummaryRouteCompatibilityAliasStillWorks(t *testing.T) {
+func TestSummaryRouteAvailableAtVersionedPath(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	router := New(config.Config{}, nil)
@@ -48,11 +53,34 @@ func TestSummaryRouteCompatibilityAliasStillWorks(t *testing.T) {
 	}
 }
 
+func TestAPIVersionRootAvailableWithTrailingSlash(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	router := New(config.Config{}, nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/", nil)
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, rec.Code)
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("expected JSON body: %v", err)
+	}
+
+	if payload["version"] != "v1" {
+		t.Fatalf("expected version v1, got %#v", payload["version"])
+	}
+}
+
 func TestSummaryPostRejectsInvalidJSON(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	router := New(config.Config{}, nil)
-	req := httptest.NewRequest(http.MethodPost, "/summary", strings.NewReader("{"))
+	req := httptest.NewRequest(http.MethodPost, "/v1/summary", strings.NewReader("{"))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 
@@ -69,6 +97,10 @@ func TestSummaryPostRejectsInvalidJSON(t *testing.T) {
 
 	if payload["code"] != "invalid_json" {
 		t.Fatalf("expected code invalid_json, got %#v", payload["code"])
+	}
+
+	if _, ok := payload["details"].(map[string]any); !ok {
+		t.Fatalf("expected details object, got %#v", payload["details"])
 	}
 }
 

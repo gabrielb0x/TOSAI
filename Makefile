@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: setup setup-backend setup-frontend dev-backend dev-frontend test
+.PHONY: setup setup-backend setup-frontend db-init dev-backend dev-frontend test
 
 setup: setup-backend setup-frontend
 
@@ -14,6 +14,9 @@ setup-backend:
 
 setup-frontend:
 	cd frontend && npm install
+
+db-init:
+	cd backend && ./scripts/init_db.sh
 
 dev-backend:
 	cd backend && go run ./cmd/server

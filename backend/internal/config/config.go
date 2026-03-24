@@ -38,7 +38,7 @@ func Load() Config {
 		Port:            getenvDefault("APP_PORT", getenvDefault("PORT", "9000")),
 		DatabaseURL:     os.Getenv("DATABASE_URL"),
 		OpenAIAPIKey:    os.Getenv("OPENAI_API_KEY"),
-		OpenAIModel:     getenvDefault("OPENAI_MODEL", "gpt-4.1-mini"),
+		OpenAIModel:     getenvDefault("OPENAI_MODEL", "gpt-5-nano"),
 		OpenAIBaseURL:   strings.TrimRight(getenvDefault("OPENAI_BASE_URL", "https://api.openai.com/v1"), "/"),
 		AdminAPIToken:   os.Getenv("ADMIN_API_TOKEN"),
 		CORSOrigins:     corsOrigins,
@@ -52,7 +52,7 @@ func Load() Config {
 	}
 
 	if cfg.OpenAIAPIKey == "" {
-		log.Println("avertissement: OPENAI_API_KEY n'est pas défini ; l'endpoint /summary renverra une erreur")
+		log.Println("avertissement: OPENAI_API_KEY n'est pas défini ; l'endpoint /v1/summary renverra une erreur")
 	}
 
 	return cfg
