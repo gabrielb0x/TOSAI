@@ -79,7 +79,7 @@ func TestAPIVersionRootAvailableWithTrailingSlash(t *testing.T) {
 func TestSummaryPostRejectsInvalidJSON(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	router := New(config.Config{}, nil)
+	router := New(config.Config{APIDebugMode: true}, nil)
 	req := httptest.NewRequest(http.MethodPost, "/v1/summary", strings.NewReader("{"))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
@@ -101,6 +101,33 @@ func TestSummaryPostRejectsInvalidJSON(t *testing.T) {
 
 	if _, ok := payload["details"].(map[string]any); !ok {
 		t.Fatalf("expected details object, got %#v", payload["details"])
+	}
+}
+
+func TestSummaryRouteRateLimitedToOneRequestPerMinute(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	router := New(config.Config{
+		AnalysisRateLimitPerMin: 1,
+		TrustedProxies:          []string{"127.0.0.1"},
+	}, nil)
+
+	firstReq := httptest.NewRequest(http.MethodGet, "/v1/summary", nil)
+	firstReq.RemoteAddr = "127.0.0.1:1234"
+	firstRec := httptest.NewRecorder()
+	router.ServeHTTP(firstRec, firstReq)
+
+	if firstRec.Code != http.StatusBadRequest {
+		t.Fatalf("expected first status %d, got %d", http.StatusBadRequest, firstRec.Code)
+	}
+
+	secondReq := httptest.NewRequest(http.MethodGet, "/v1/summary", nil)
+	secondReq.RemoteAddr = "127.0.0.1:1234"
+	secondRec := httptest.NewRecorder()
+	router.ServeHTTP(secondRec, secondReq)
+
+	if secondRec.Code != http.StatusTooManyRequests {
+		t.Fatalf("expected second status %d, got %d", http.StatusTooManyRequests, secondRec.Code)
 	}
 }
 

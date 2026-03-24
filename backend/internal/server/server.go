@@ -1,7 +1,9 @@
 package server
 
 import (
+	"log"
 	"strings"
+	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -14,6 +16,7 @@ import (
 func New(cfg config.Config, pool *pgxpool.Pool) *gin.Engine {
 	r := gin.Default()
 	analysisSvc := newAnalysisService(cfg)
+	rateLimiter := newRateLimiter(cfg.AnalysisRateLimitPerMin, time.Minute)
 
 	r.Use(requestIDMiddleware())
 	r.Use(func(c *gin.Context) {
@@ -36,12 +39,19 @@ func New(cfg config.Config, pool *pgxpool.Pool) *gin.Engine {
 	corsCfg.AllowOrigins = trimEmpty(corsCfg.AllowOrigins)
 	r.Use(cors.New(corsCfg))
 
+	if err := r.SetTrustedProxies(cfg.TrustedProxies); err != nil {
+		log.Printf("avertissement: TRUSTED_PROXIES invalide (%v) ; trust proxies desactive", err)
+		if disableErr := r.SetTrustedProxies(nil); disableErr != nil {
+			log.Printf("avertissement: impossible de desactiver trust proxies: %v", disableErr)
+		}
+	}
+
 	api := r.Group("/v1")
 	api.GET("", handleAPIRoot)
 	api.GET("/", handleAPIRoot)
-	registerSummaryRoutes(api, analysisSvc)
+	registerSummaryRoutes(api, analysisSvc, summaryRateLimitMiddleware(rateLimiter, cfg.AppEnv, cfg.APIDebugMode))
 
-	registerSummaryRoutes(r, analysisSvc)
+	registerSummaryRoutes(r, analysisSvc, summaryRateLimitMiddleware(rateLimiter, cfg.AppEnv, cfg.APIDebugMode))
 
 	return r
 }
@@ -51,9 +61,15 @@ type summaryRouter interface {
 	POST(string, ...gin.HandlerFunc) gin.IRoutes
 }
 
-func registerSummaryRoutes(router summaryRouter, analysisSvc *analysisService) {
-	router.GET("/summary", analysisSvc.handleSummaryGET)
-	router.POST("/summary", analysisSvc.handleSummaryPOST)
+func registerSummaryRoutes(router summaryRouter, analysisSvc *analysisService, middleware ...gin.HandlerFunc) {
+	getHandlers := append([]gin.HandlerFunc{}, middleware...)
+	getHandlers = append(getHandlers, analysisSvc.handleSummaryGET)
+
+	postHandlers := append([]gin.HandlerFunc{}, middleware...)
+	postHandlers = append(postHandlers, analysisSvc.handleSummaryPOST)
+
+	router.GET("/summary", getHandlers...)
+	router.POST("/summary", postHandlers...)
 }
 
 func trimEmpty(values []string) []string {

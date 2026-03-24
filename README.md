@@ -17,7 +17,9 @@ Le frontend est maintenant organise en 2 pages:
 
 - **API Go (Gin)**: endpoint principal `POST /v1/summary` sur `https://api.tosai.fr`
 - **Extraction de contenu** depuis une URL cible
-- **Analyse OpenAI** avec sortie JSON stricte
+- **Cache PostgreSQL par URL** avant tout appel OpenAI
+- **Analyse OpenAI en 2 temps**: web research puis analyse finale JSON stricte
+- **Rate limit**: 1 demande par minute et par IP
 - **Frontend Vite** sombre, anime, responsive
 
 ---
@@ -217,10 +219,15 @@ Fichier prioritaire: `backend/.env`.
 - `CORS_ORIGINS` (liste CSV ou `*`)
 - `ADMIN_API_TOKEN`
 - `OPENAI_API_KEY` (**obligatoire pour l'analyse**)
-- `OPENAI_MODEL` (defaut `gpt-5-nano`)
+- `OPENAI_MODEL` (defaut `gpt-5.4-mini`)
+- `OPENAI_RESEARCH_MODEL` (optionnel, phase web research)
 - `OPENAI_BASE_URL` (defaut `https://api.openai.com/v1`)
-- `HTTP_TIMEOUT_SECONDS` (defaut `25`)
+- `HTTP_TIMEOUT_SECONDS` (defaut `45`)
 - `ANALYSIS_INPUT_MAX_CHARS` (defaut `12000`)
+- `ANALYSIS_CACHE_MAX_AGE_DAYS` (defaut `90`)
+- `ANALYSIS_RATE_LIMIT_PER_MINUTE` (defaut `1`)
+- `API_DEBUG_MODE` (`true` = responses API tres verbeuses cote backend)
+- `TRUSTED_PROXIES` (defaut `127.0.0.1,::1`)
 - `VITE_BACKEND_PROXY_TARGET` (frontend dev, defaut `http://localhost:9000`)
 - `VITE_MASK_BUILD_FILENAMES` (frontend build, `true` = noms de fichiers hashes sans prefixe, ex `assets/abc123.css`)
 
@@ -239,6 +246,7 @@ Fichier prioritaire: `backend/.env`.
 - Si `/tosai` ne charge pas en prod: verifier le `try_files` NGINX vers `/index.html`.
 - Si la DB echoue au demarrage: tester `DATABASE_URL` avec `psql` et verifier les droits `CREATE/ALTER`.
 - Si `/v1/summary` renvoie une erreur: regardez le `request_id` dans la reponse puis retrouvez la ligne `api_error` correspondante dans les logs backend.
+- Si l'API renvoie `rate_limited`: attendez 1 minute ou ajustez `ANALYSIS_RATE_LIMIT_PER_MINUTE`.
 
 ---
 

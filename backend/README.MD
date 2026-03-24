@@ -7,6 +7,13 @@ Ce dossier contient le backend Go de TOSAI. Il expose maintenant une API simple:
 - lecture rapide: `GET /v1/summary?url=https://example.com/terms`
 - alias de compatibilite conserve: `/summary`
 
+Le flux d'analyse est maintenant:
+
+- verification du cache PostgreSQL par URL
+- si cache frais: retour direct sans appel OpenAI
+- si cache > 90 jours: retour du cache avec `is_contestable=true`
+- sinon: fetch URL -> web research OpenAI -> analyse finale OpenAI
+
 Il n'y a plus de route `/healthz` ni de page web embarquee dans le backend. Le processus a lancer est simplement le serveur API.
 
 ## Prerequis
@@ -63,12 +70,17 @@ Le backend charge en priorite `backend/.env`, puis `backend/config/.env`.
 - `APP_PORT`: port HTTP local du backend
 - `DATABASE_URL`: URL PostgreSQL complete
 - `CORS_ORIGINS`: liste CSV des origines autorisees
+- `TRUSTED_PROXIES`: proxies de confiance pour une vraie IP client fiable
 - `ADMIN_API_TOKEN`: reserve pour des endpoints admin
 - `OPENAI_API_KEY`: obligatoire pour `/v1/summary`
-- `OPENAI_MODEL`: defaut `gpt-5-nano`
+- `OPENAI_MODEL`: defaut `gpt-5.4-mini`
+- `OPENAI_RESEARCH_MODEL`: modele optionnel pour la phase de web research
 - `OPENAI_BASE_URL`: defaut `https://api.openai.com/v1`
 - `HTTP_TIMEOUT_SECONDS`: timeout reseau global
 - `ANALYSIS_INPUT_MAX_CHARS`: taille max du texte envoye a OpenAI
+- `ANALYSIS_CACHE_MAX_AGE_DAYS`: age max du cache avant `is_contestable=true`
+- `ANALYSIS_RATE_LIMIT_PER_MINUTE`: limite par IP, defaut `1`
+- `API_DEBUG_MODE`: si `true`, l'API ajoute un gros bloc `debug` dans ses responses JSON
 - `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD` / `DB_SSLMODE`: utilises par `./scripts/init_db.sh`
 - `POSTGRES_ADMIN_URL`: connexion admin optionnelle pour `./scripts/init_db.sh` si vous ne voulez pas utiliser `sudo -u postgres`
 
@@ -78,12 +90,17 @@ Exemple complet:
 APP_ENV=prod
 APP_PORT=9000
 OPENAI_API_KEY=sk-...
-OPENAI_MODEL=gpt-5-nano
+OPENAI_MODEL=gpt-5.4-mini
+OPENAI_RESEARCH_MODEL=gpt-5.4-mini
 OPENAI_BASE_URL=https://api.openai.com/v1
 DATABASE_URL=postgres://tosai_app:change-me@127.0.0.1:5432/tosai?sslmode=disable
 CORS_ORIGINS=https://tosai.fr,https://www.tosai.fr
-HTTP_TIMEOUT_SECONDS=25
+TRUSTED_PROXIES=127.0.0.1,::1
+HTTP_TIMEOUT_SECONDS=45
 ANALYSIS_INPUT_MAX_CHARS=12000
+ANALYSIS_CACHE_MAX_AGE_DAYS=90
+ANALYSIS_RATE_LIMIT_PER_MINUTE=1
+API_DEBUG_MODE=false
 ```
 
 ## Configuration PostgreSQL
@@ -186,6 +203,14 @@ curl -X POST http://127.0.0.1:9000/v1/summary \
   -d '{"url":"https://example.com/terms"}'
 ```
 
+### POST force refresh
+
+```bash
+curl -X POST http://127.0.0.1:9000/v1/summary \
+  -H 'Content-Type: application/json' \
+  -d '{"url":"https://example.com/terms","force_refresh":true}'
+```
+
 ### GET
 
 ```bash
@@ -213,5 +238,7 @@ Le fichier `../nginx.example.conf` peut servir de base.
 - `missing_openai_api_key`: verifier `OPENAI_API_KEY`
 - `fetch_failed`: la page cible n'est pas accessible depuis le serveur
 - `openai_http_error`: verifier cle, modele, quota ou proxy OpenAI
+- `rate_limited`: une IP a depasse 1 requete/minute
 - erreur SQL au boot: verifier `DATABASE_URL`, droits de l'utilisateur et extension `pgcrypto`
 - chaque erreur API renvoie maintenant un `request_id`; utilisez-le pour retrouver la ligne `api_error ...` dans les logs backend
+- avec `API_DEBUG_MODE=true`, l'API ajoute un bloc `debug` detaille dans les responses JSON, sans rien afficher en plus dans le frontend

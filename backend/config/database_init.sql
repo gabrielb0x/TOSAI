@@ -68,6 +68,37 @@ CREATE INDEX IF NOT EXISTS idx_tosai_analyses_document ON tosai_analyses(documen
 CREATE INDEX IF NOT EXISTS idx_tosai_analyses_created_at ON tosai_analyses(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_tosai_analyses_rating ON tosai_analyses(rating);
 
+ALTER TABLE tosai_analyses
+    ADD COLUMN IF NOT EXISTS is_contestable BOOLEAN NOT NULL DEFAULT FALSE;
+
+ALTER TABLE tosai_analyses
+    ADD COLUMN IF NOT EXISTS research_json JSONB NOT NULL DEFAULT '{}'::jsonb;
+
+ALTER TABLE tosai_analyses
+    ADD COLUMN IF NOT EXISTS debug_json JSONB NOT NULL DEFAULT '{}'::jsonb;
+
+-- 5b) Cache par URL normalisee pour eviter les appels OpenAI inutiles
+CREATE TABLE IF NOT EXISTS tosai_cached_analyses (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    normalized_url TEXT NOT NULL UNIQUE,
+    source_url TEXT NOT NULL,
+    domain TEXT NOT NULL,
+    fetched_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    analyzed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    http_status INT,
+    content_type TEXT,
+    character_count INT NOT NULL DEFAULT 0,
+    raw_text TEXT,
+    model TEXT NOT NULL,
+    is_contestable BOOLEAN NOT NULL DEFAULT FALSE,
+    research_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+    analysis_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+    debug_json JSONB NOT NULL DEFAULT '{}'::jsonb
+);
+
+CREATE INDEX IF NOT EXISTS idx_tosai_cached_analyses_analyzed_at ON tosai_cached_analyses(analyzed_at DESC);
+CREATE INDEX IF NOT EXISTS idx_tosai_cached_analyses_domain ON tosai_cached_analyses(domain);
+
 -- 6) Signalements utilisateurs
 CREATE TABLE IF NOT EXISTS tosai_reports (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

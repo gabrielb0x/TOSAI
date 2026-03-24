@@ -463,6 +463,7 @@ const extractSummary = (payload) => {
       summary: CONFIG.emptySummary,
       highlights: [],
       risks: [],
+      isContestable: false,
     }
   }
 
@@ -473,6 +474,7 @@ const extractSummary = (payload) => {
     summary: analysis.summary || analysis.summary_md || payload.message || CONFIG.emptySummary,
     highlights: analysis.highlights || [],
     risks: analysis.risks || [],
+    isContestable: Boolean(analysis.is_contestable),
   }
 }
 
@@ -491,6 +493,8 @@ const initToolPage = () => {
   if (!form || !urlInput || !rating || !summary || !highlights || !risks || !submitButton) {
     return
   }
+
+  let retryAllowed = false
 
   const setRating = (value = '-') => {
     const normalized = String(value || '-')
@@ -517,11 +521,17 @@ const initToolPage = () => {
     summaryValue = CONFIG.emptySummary,
     highlightsValue = [],
     risksValue = [],
+    isContestableValue = false,
   }) => {
+    retryAllowed = Boolean(isContestableValue)
     setRating(ratingValue)
     summary.textContent = summaryValue
     setList(highlights, highlightsValue, 'Les bons points apparaitront ici apres analyse.')
     setList(risks, risksValue, 'Les points sensibles apparaitront ici apres analyse.')
+    if (retryButton) {
+      retryButton.disabled = submitButton.disabled || !retryAllowed
+      retryButton.setAttribute('aria-disabled', String(retryButton.disabled))
+    }
   }
 
   const setLoadingState = (loading) => {
@@ -529,7 +539,8 @@ const initToolPage = () => {
     submitButton.textContent = loading ? 'Analyse...' : 'Analyser'
 
     if (retryButton) {
-      retryButton.disabled = loading
+      retryButton.disabled = loading || !retryAllowed
+      retryButton.setAttribute('aria-disabled', String(retryButton.disabled))
     }
   }
 
@@ -556,9 +567,7 @@ const initToolPage = () => {
     hideHumanFeedback()
   }
 
-  const submitForm = async (event) => {
-    event.preventDefault()
-
+  const runAnalysis = async ({ forceRefresh = false } = {}) => {
     const urlValue = urlInput.value.trim()
     if (!urlValue) {
       urlInput.focus()
@@ -581,7 +590,7 @@ const initToolPage = () => {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ url: urlValue }),
+          body: JSON.stringify({ url: urlValue, force_refresh: forceRefresh }),
         }),
         CONFIG.requestTimeoutMs,
       )
@@ -599,14 +608,20 @@ const initToolPage = () => {
         throw buildApiRequestError(response, payload)
       }
 
-      const { rating: ratingValue, summary: summaryValue, highlights: highlightsValue, risks: risksValue } =
-        extractSummary(payload)
+      const {
+        rating: ratingValue,
+        summary: summaryValue,
+        highlights: highlightsValue,
+        risks: risksValue,
+        isContestable: isContestableValue,
+      } = extractSummary(payload)
 
       updateResult({
         ratingValue,
         summaryValue,
         highlightsValue,
         risksValue,
+        isContestableValue,
       })
     } catch (error) {
       const message = error instanceof Error && error.message ? error.message : "Impossible de contacter l'API."
@@ -625,6 +640,7 @@ const initToolPage = () => {
         summaryValue: message,
         highlightsValue: highlightItems,
         risksValue: detailItems,
+        isContestableValue: false,
       })
 
       if (error instanceof ApiRequestError && error.requestId) {
@@ -635,15 +651,18 @@ const initToolPage = () => {
     }
   }
 
-  const retryAnalysis = () => {
-    hideHumanFeedback()
+  const submitForm = (event) => {
+    event.preventDefault()
+    void runAnalysis({ forceRefresh: false })
+  }
 
-    if (typeof form.requestSubmit === 'function') {
-      form.requestSubmit()
+  const retryAnalysis = () => {
+    if (!retryAllowed) {
       return
     }
 
-    submitButton.click()
+    hideHumanFeedback()
+    void runAnalysis({ forceRefresh: true })
   }
 
   const requestHumanCheck = () => {

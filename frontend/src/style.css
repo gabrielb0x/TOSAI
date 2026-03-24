@@ -344,6 +344,18 @@ button.menu-toggle:hover {
   transform: none;
 }
 
+button:disabled,
+.btn:disabled,
+button[aria-disabled='true'] {
+  cursor: not-allowed;
+  transform: none;
+  opacity: 0.52;
+  border-color: rgba(17, 19, 26, 0.08);
+  background: rgba(17, 19, 26, 0.06);
+  color: rgba(17, 19, 26, 0.42);
+  box-shadow: none;
+}
+
 .chapter-head {
   display: grid;
   gap: 0.9rem;
