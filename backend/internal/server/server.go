@@ -49,9 +49,9 @@ func New(cfg config.Config, pool *pgxpool.Pool) *gin.Engine {
 	api := r.Group("/v1")
 	api.GET("", handleAPIRoot)
 	api.GET("/", handleAPIRoot)
-	registerSummaryRoutes(api, analysisSvc, summaryRateLimitMiddleware(rateLimiter, cfg.AppEnv, cfg.APIDebugMode))
+	registerSummaryRoutes(api, analysisSvc, summaryRateLimitMiddleware(rateLimiter, analysisSvc.cacheMaxAge, cfg.AppEnv, cfg.APIDebugMode))
 
-	registerSummaryRoutes(r, analysisSvc, summaryRateLimitMiddleware(rateLimiter, cfg.AppEnv, cfg.APIDebugMode))
+	registerSummaryRoutes(r, analysisSvc, summaryRateLimitMiddleware(rateLimiter, analysisSvc.cacheMaxAge, cfg.AppEnv, cfg.APIDebugMode))
 
 	return r
 }

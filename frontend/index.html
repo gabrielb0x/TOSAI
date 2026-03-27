@@ -280,7 +280,8 @@
 
           <section class="panel result-panel" data-animate>
             <div class="result-head">
-              <div>
+              <div class="result-heading">
+                <span id="service-name" class="service-name">Service analyse</span>
                 <span class="label">Note</span>
                 <p id="rating" class="rating" data-rating="X">-</p>
               </div>
@@ -288,19 +289,20 @@
 
             <p id="summary-text" class="summary-text">Aucun resume pour le moment.</p>
 
-            <div class="split-panel">
-              <article>
-                <span class="label">Bons points</span>
-                <ul id="highlights-list" class="bullet-list">
-                  <li>Les bons points apparaitront ici apres analyse.</li>
-                </ul>
-              </article>
-              <article>
-                <span class="label">Mauvais points</span>
-                <ul id="risks-list" class="bullet-list">
-                  <li>Les points sensibles apparaitront ici apres analyse.</li>
-                </ul>
-              </article>
+            <div class="points-shell">
+              <span class="label">Points</span>
+              <div id="points-groups" class="points-groups">
+                <section class="point-group">
+                  <h2>En attente</h2>
+                  <ul class="point-list">
+                    <li class="point-card is-neutral">
+                      <span class="point-badge">Neutre</span>
+                      <strong>Les points de l'analyse apparaitront ici.</strong>
+                      <p>Le backend renverra une liste courte de clauses classees par impact.</p>
+                    </li>
+                  </ul>
+                </section>
+              </div>
             </div>
 
             <div class="result-actions">

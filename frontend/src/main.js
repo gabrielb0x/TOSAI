@@ -328,6 +328,25 @@ const installRouter = () => {
   document.addEventListener('click', (event) => {
     const anchor = event.target.closest('a[data-nav]')
     if (!anchor) {
+      const hashAnchor = event.target.closest('a[href^="#"]')
+      if (!hashAnchor) {
+        return
+      }
+
+      const href = hashAnchor.getAttribute('href') || ''
+      const targetId = href.slice(1)
+      if (!targetId) {
+        return
+      }
+
+      const targetElement = document.getElementById(targetId)
+      if (!targetElement) {
+        return
+      }
+
+      event.preventDefault()
+      targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      window.history.replaceState(window.history.state, '', `${window.location.pathname}${href}`)
       return
     }
 
@@ -479,21 +498,29 @@ const buildApiRequestError = (response, payload) => {
 const extractSummary = (payload) => {
   if (!payload || typeof payload !== 'object') {
     return {
+      serviceName: 'Service analyse',
       rating: '-',
       summary: CONFIG.emptySummary,
-      highlights: [],
-      risks: [],
+      points: [],
       isContestable: false,
     }
   }
 
   const analysis = payload.analysis && typeof payload.analysis === 'object' ? payload.analysis : payload
+  const points = Array.isArray(analysis.points)
+    ? analysis.points
+    : [
+        ...(Array.isArray(analysis.risks) ? analysis.risks.map((title) => ({ category: 'bad', title, details: title })) : []),
+        ...(Array.isArray(analysis.highlights)
+          ? analysis.highlights.map((title) => ({ category: 'good', title, details: title }))
+          : []),
+      ]
 
   return {
+    serviceName: analysis.service_name || 'Service analyse',
     rating: analysis.rating || analysis.note || analysis.grade || '-',
     summary: analysis.summary || analysis.summary_md || payload.message || CONFIG.emptySummary,
-    highlights: analysis.highlights || [],
-    risks: analysis.risks || [],
+    points,
     isContestable: Boolean(analysis.is_contestable),
   }
 }
@@ -501,20 +528,33 @@ const extractSummary = (payload) => {
 const initToolPage = () => {
   const form = document.getElementById('analyze-form')
   const urlInput = document.getElementById('tos-url')
+  const serviceName = document.getElementById('service-name')
   const rating = document.getElementById('rating')
   const summary = document.getElementById('summary-text')
-  const highlights = document.getElementById('highlights-list')
-  const risks = document.getElementById('risks-list')
+  const pointsGroups = document.getElementById('points-groups')
   const retryButton = document.getElementById('retry-analysis')
   const humanButton = document.getElementById('human-check')
   const humanFeedback = document.getElementById('human-feedback')
   const submitButton = form?.querySelector('button[type="submit"]')
 
-  if (!form || !urlInput || !rating || !summary || !highlights || !risks || !submitButton) {
+  if (!form || !urlInput || !serviceName || !rating || !summary || !pointsGroups || !submitButton) {
     return
   }
 
   let retryAllowed = false
+  const pointCategoryOrder = ['blocker', 'bad', 'neutral', 'good']
+  const pointCategoryLabels = {
+    blocker: 'Bloquant',
+    bad: 'Mauvais',
+    neutral: 'Neutre',
+    good: 'Bon',
+  }
+  const pointGroupTitles = {
+    blocker: 'Points bloquants',
+    bad: 'Points defavorables',
+    neutral: 'Points neutres',
+    good: 'Points favorables',
+  }
 
   const setRating = (value = '-') => {
     const normalized = String(value || '-')
@@ -525,29 +565,85 @@ const initToolPage = () => {
     rating.dataset.rating = ['A', 'B', 'C', 'D', 'E'].includes(normalized) ? normalized : 'X'
   }
 
-  const setList = (target, items, fallback) => {
-    target.innerHTML = ''
-    const safeItems = Array.isArray(items) && items.length > 0 ? items : [fallback]
+  const renderPoints = (items) => {
+    pointsGroups.innerHTML = ''
+    const safeItems = Array.isArray(items) && items.length > 0 ? items : []
 
-    safeItems.forEach((item) => {
-      const li = document.createElement('li')
-      li.textContent = item
-      target.appendChild(li)
+    if (safeItems.length === 0) {
+      pointsGroups.innerHTML = `
+        <section class="point-group">
+          <h2>En attente</h2>
+          <ul class="point-list">
+            <li class="point-card is-neutral">
+              <span class="point-badge">Neutre</span>
+              <strong>Les points de l'analyse apparaitront ici.</strong>
+              <p>Le backend renverra une liste courte de clauses classees par impact.</p>
+            </li>
+          </ul>
+        </section>
+      `
+      return
+    }
+
+    let rendered = false
+    pointCategoryOrder.forEach((category) => {
+      const categoryItems = safeItems.filter((item) => String(item?.category || '').toLowerCase() === category)
+      if (categoryItems.length === 0) {
+        return
+      }
+      rendered = true
+
+      const section = document.createElement('section')
+      section.className = 'point-group'
+
+      const title = document.createElement('h2')
+      title.textContent = pointGroupTitles[category]
+      section.appendChild(title)
+
+      const list = document.createElement('ul')
+      list.className = 'point-list'
+
+      categoryItems.forEach((item) => {
+        const card = document.createElement('li')
+        card.className = `point-card is-${category}`
+
+        const badge = document.createElement('span')
+        badge.className = 'point-badge'
+        badge.textContent = pointCategoryLabels[category]
+
+        const heading = document.createElement('strong')
+        heading.textContent = String(item?.title || '').trim() || 'Point analyse'
+
+        const details = document.createElement('p')
+        details.textContent = String(item?.details || '').trim() || heading.textContent
+
+        card.appendChild(badge)
+        card.appendChild(heading)
+        card.appendChild(details)
+        list.appendChild(card)
+      })
+
+      section.appendChild(list)
+      pointsGroups.appendChild(section)
     })
+
+    if (!rendered) {
+      renderPoints([])
+    }
   }
 
   const updateResult = ({
+    serviceNameValue = 'Service analyse',
     ratingValue = '-',
     summaryValue = CONFIG.emptySummary,
-    highlightsValue = [],
-    risksValue = [],
+    pointsValue = [],
     isContestableValue = false,
   }) => {
     retryAllowed = Boolean(isContestableValue)
+    serviceName.textContent = serviceNameValue
     setRating(ratingValue)
     summary.textContent = summaryValue
-    setList(highlights, highlightsValue, 'Les bons points apparaitront ici apres analyse.')
-    setList(risks, risksValue, 'Les points sensibles apparaitront ici apres analyse.')
+    renderPoints(pointsValue)
     if (retryButton) {
       retryButton.disabled = submitButton.disabled || !retryAllowed
       retryButton.setAttribute('aria-disabled', String(retryButton.disabled))
@@ -601,10 +697,21 @@ const initToolPage = () => {
     hideHumanFeedback()
     setLoadingState(true)
     updateResult({
+      serviceNameValue: normalizedDomain,
       ratingValue: '-',
       summaryValue: 'Analyse en cours...',
-      highlightsValue: ['Lecture de la page en cours...'],
-      risksValue: ['Detection des points sensibles en cours...'],
+      pointsValue: [
+        {
+          category: 'neutral',
+          title: 'Recherche de la bonne page de CGU en cours',
+          details: 'Le backend verifie le domaine puis localise les conditions d utilisation les plus pertinentes.',
+        },
+        {
+          category: 'neutral',
+          title: 'Analyse des clauses en cours',
+          details: 'Les points les plus importants seront resumes sous forme de liste courte.',
+        },
+      ],
     })
 
     try {
@@ -633,18 +740,18 @@ const initToolPage = () => {
       }
 
       const {
+        serviceName: serviceNameValue,
         rating: ratingValue,
         summary: summaryValue,
-        highlights: highlightsValue,
-        risks: risksValue,
+        points: pointsValue,
         isContestable: isContestableValue,
       } = extractSummary(payload)
 
       updateResult({
+        serviceNameValue,
         ratingValue,
         summaryValue,
-        highlightsValue,
-        risksValue,
+        pointsValue,
         isContestableValue,
       })
     } catch (error) {
@@ -653,17 +760,25 @@ const initToolPage = () => {
         error instanceof ApiRequestError && error.detailItems.length > 0
           ? error.detailItems
           : ['La requete a echoue ou le backend est indisponible.']
-      const highlightItems = ['Verifie les logs du backend si le probleme persiste.']
+      const errorPoints = detailItems.map((item) => ({
+        category: 'bad',
+        title: item,
+        details: 'Ajuste la requete ou consulte les logs backend si le probleme persiste.',
+      }))
 
-      if (error instanceof ApiRequestError && error.status) {
-        highlightItems.unshift(`HTTP ${error.status}`)
+      if (error instanceof ApiRequestError && error.status && errorPoints.length > 0) {
+        errorPoints.unshift({
+          category: 'neutral',
+          title: `HTTP ${error.status}`,
+          details: 'Le backend a renvoye une erreur pendant le traitement.',
+        })
       }
 
       updateResult({
+        serviceNameValue: normalizeAnalyzedDomain(urlInput.value) || 'Service analyse',
         ratingValue: '-',
         summaryValue: message,
-        highlightsValue: highlightItems,
-        risksValue: detailItems,
+        pointsValue: errorPoints,
         isContestableValue: false,
       })
 

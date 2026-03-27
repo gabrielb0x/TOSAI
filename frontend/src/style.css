@@ -219,12 +219,19 @@ code {
 .nav-links a:hover,
 .nav-links a.is-active {
   color: var(--ink);
-  background: rgba(17, 19, 26, 0.05);
+  background: rgba(94, 94, 94, 0.05);
 }
 
 .nav-cta {
   background: #11131a;
   color: #ffffff !important;
+  transition: color 0.22s ease, background-color 0.22s ease;
+}
+
+.nav-cta:hover,
+.nav-cta:focus-visible {
+  background: rgba(17, 19, 26, 0.06) !important;
+  color: #5f6472 !important;
 }
 
 .nav-disabled {
@@ -826,6 +833,18 @@ input[type='url']:focus {
   text-align: center;
 }
 
+.result-heading {
+  display: grid;
+  gap: 0.45rem;
+  justify-items: center;
+}
+
+.service-name {
+  font-size: clamp(1.35rem, 2.8vw, 2.2rem);
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
 .rating {
   margin: 0.45rem auto 0;
   background: rgba(66, 133, 244, 0.08);
@@ -851,27 +870,106 @@ input[type='url']:focus {
 
 .result-panel .summary-text {
   text-align: center;
+  max-width: 52rem;
+  margin: 0 auto;
 }
 
-.split-panel {
+.points-shell {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
 }
 
-.bullet-list {
+.points-groups {
+  display: grid;
+  gap: 1rem;
+}
+
+.point-group {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.point-group h2 {
+  font-size: 1rem;
+  letter-spacing: -0.03em;
+}
+
+.point-list {
   list-style: none;
   display: grid;
   gap: 0.66rem;
-  margin-top: 0.55rem;
 }
 
-.bullet-list li {
+.point-card {
   border-radius: 1.3rem;
   background: rgba(17, 19, 26, 0.04);
   padding: 0.9rem;
-  color: var(--muted);
+  color: var(--ink);
   font-size: 0.92rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.point-card strong {
+  font-size: 0.95rem;
+}
+
+.point-card p {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.point-badge {
+  width: fit-content;
+  min-height: 1.9rem;
+  padding: 0 0.7rem;
+  border-radius: var(--radius-pill);
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.74rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.point-card.is-blocker {
+  background: rgba(234, 67, 53, 0.12);
+  border: 1px solid rgba(234, 67, 53, 0.18);
+}
+
+.point-card.is-blocker .point-badge {
+  background: rgba(234, 67, 53, 0.2);
+  color: #b3261e;
+}
+
+.point-card.is-bad {
+  background: rgba(251, 188, 5, 0.14);
+  border: 1px solid rgba(251, 188, 5, 0.2);
+}
+
+.point-card.is-bad .point-badge {
+  background: rgba(251, 188, 5, 0.2);
+  color: #8d6200;
+}
+
+.point-card.is-good {
+  background: rgba(52, 168, 83, 0.12);
+  border: 1px solid rgba(52, 168, 83, 0.18);
+}
+
+.point-card.is-good .point-badge {
+  background: rgba(52, 168, 83, 0.18);
+  color: #227640;
+}
+
+.point-card.is-neutral {
+  background: rgba(17, 19, 26, 0.04);
+  border: 1px solid rgba(17, 19, 26, 0.08);
+}
+
+.point-card.is-neutral .point-badge {
+  background: rgba(17, 19, 26, 0.08);
+  color: var(--muted);
 }
 
 .human-feedback {
@@ -934,7 +1032,7 @@ input[type='url']:focus {
 
 @media (max-width: 1080px) {
   .story-row,
-  .split-panel {
+  .points-shell {
     grid-template-columns: 1fr;
   }
 

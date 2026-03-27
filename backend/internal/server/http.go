@@ -66,7 +66,7 @@ func handleAPIRoot(c *gin.Context) {
 		"request_id":   getRequestID(c),
 		"generated_at": time.Now().UTC().Format(time.RFC3339),
 		"endpoints": gin.H{
-			"summary_get":  "/v1/summary?url=https://example.com/terms",
+			"summary_get":  "/v1/summary?url=example.com",
 			"summary_post": "/v1/summary",
 		},
 	})

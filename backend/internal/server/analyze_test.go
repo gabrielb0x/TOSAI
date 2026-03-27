@@ -211,8 +211,10 @@ func TestSanitizeAnalysisSetsContestableFromConfidence(t *testing.T) {
 	t.Parallel()
 
 	highConfidence := sanitizeAnalysis(summaryAnalysis{
+		ServiceName:    "Example",
 		Rating:         "b",
 		Summary:        "Resume utile",
+		Points:         []analysisPoint{{Category: "good", Title: "Vous gardez la propriete de votre contenu", Details: "La licence reste limitee au service."}},
 		Highlights:     []string{"Point 1"},
 		Risks:          []string{"Risque 1"},
 		Recommendation: "Lire avant d'accepter",
@@ -224,8 +226,10 @@ func TestSanitizeAnalysisSetsContestableFromConfidence(t *testing.T) {
 	}
 
 	lowConfidence := sanitizeAnalysis(summaryAnalysis{
+		ServiceName:    "Example",
 		Rating:         "c",
 		Summary:        "Resume utile",
+		Points:         []analysisPoint{{Category: "bad", Title: "Le service suit votre activite publicitaire", Details: "Les clauses autorisent le ciblage."}},
 		Highlights:     []string{"Point 1"},
 		Risks:          []string{"Risque 1"},
 		Recommendation: "Lire avant d'accepter",
@@ -233,5 +237,29 @@ func TestSanitizeAnalysisSetsContestableFromConfidence(t *testing.T) {
 	})
 	if !lowConfidence.IsContestable {
 		t.Fatalf("expected contestable=true when confidence is low")
+	}
+}
+
+func TestShouldServeCachedSummaryOnlyBypassesForCacheResponses(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 3, 24, 14, 0, 0, 0, time.UTC)
+	freshCache := &cachedAnalysisRecord{
+		AnalyzedAt:    now.Add(-48 * time.Hour),
+		IsContestable: false,
+	}
+	staleCache := &cachedAnalysisRecord{
+		AnalyzedAt:    now.Add(-(91 * 24 * time.Hour)),
+		IsContestable: false,
+	}
+
+	if !shouldServeCachedSummary(false, freshCache, 90*24*time.Hour, now) {
+		t.Fatalf("expected cached response to bypass rate limit when refresh is not forced")
+	}
+	if !shouldServeCachedSummary(true, freshCache, 90*24*time.Hour, now) {
+		t.Fatalf("expected forced refresh to still use cache when refresh is not allowed")
+	}
+	if shouldServeCachedSummary(true, staleCache, 90*24*time.Hour, now) {
+		t.Fatalf("expected stale cache with forced refresh to require a fresh analysis")
 	}
 }

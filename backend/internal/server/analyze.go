@@ -44,13 +44,21 @@ type summaryRequest struct {
 }
 
 type summaryAnalysis struct {
-	Rating         string   `json:"rating"`
-	Summary        string   `json:"summary"`
-	Highlights     []string `json:"highlights"`
-	Risks          []string `json:"risks"`
-	Recommendation string   `json:"recommendation"`
-	Confidence     string   `json:"confidence"`
-	IsContestable  bool     `json:"is_contestable"`
+	ServiceName    string          `json:"service_name"`
+	Rating         string          `json:"rating"`
+	Summary        string          `json:"summary"`
+	Points         []analysisPoint `json:"points"`
+	Highlights     []string        `json:"highlights"`
+	Risks          []string        `json:"risks"`
+	Recommendation string          `json:"recommendation"`
+	Confidence     string          `json:"confidence"`
+	IsContestable  bool            `json:"is_contestable"`
+}
+
+type analysisPoint struct {
+	Category string `json:"category"`
+	Title    string `json:"title"`
+	Details  string `json:"details"`
 }
 
 type researchResult struct {
@@ -483,7 +491,7 @@ func (s *analysisService) researchWithOpenAI(ctx context.Context, normalizedURL 
 
 	systemPrompt := "Tu travailles en coulisses pour le projet TOSAI. Tu ne dois jamais mentionner ce nom, ni dans le JSON ni dans tes formulations. Tu utilises obligatoirement la recherche web pour identifier la page officielle de CGU/ToS/Terms la plus pertinente pour un domaine, puis en extraire un contenu concret et fiable."
 	userPrompt := fmt.Sprintf(
-		"Domaine a analyser: %s\n\nUtilise la recherche web pour trouver la meilleure page officielle parmi Terms of Service, Conditions d'utilisation, CGU, Terms, User Agreement, Legal Terms ou equivalent. Priorise la page officielle du service, sur le domaine principal ou un sous-domaine officiel. Retourne uniquement un JSON strict avec l'URL cible, le titre de page, un extrait concret du contenu de la page retrouvee, un court resume, 3 a 5 constats factuels, un niveau de confiance et les sources. Ignore les elements de reputation generale qui n'aident pas a confirmer ou comprendre la page de CGU.",
+		"Domaine a analyser: %s\n\nUtilise la recherche web pour trouver la meilleure page officielle parmi Terms of Service, Conditions d'utilisation, CGU, Terms, User Agreement, Legal Terms ou equivalent. Priorise la page officielle du service, sur le domaine principal ou un sous-domaine officiel. Retourne uniquement un JSON strict avec l'URL cible, le titre de page, un extrait (ou tout le contenu si possible) concret du contenu de la page retrouvee, un niveau de confiance et les sources. Ignore les elements de reputation generale qui n'aident pas a confirmer ou comprendre la page de CGU.",
 		normalizedURL,
 	)
 
@@ -563,9 +571,9 @@ func (s *analysisService) analyzeWithOpenAI(ctx context.Context, normalizedURL s
 		}
 	}
 
-	systemPrompt := "Tu travailles en coulisses pour le projet TOSAI. Tu ne dois jamais mentionner ce nom. Tu es un auditeur juridique produit. Tu analyses des CGU/ToS et tu renvoies uniquement un JSON strict conforme au schema, sans phrase meta."
+	systemPrompt := "Tu travailles en coulisses pour le projet TOSAI. Tu ne dois jamais mentionner ce nom. Tu es un auditeur juridique produit specialise dans les CGU, politiques de confidentialite et conditions de service. Tu renvoies uniquement un JSON strict conforme au schema, sans phrase meta. Ton style doit etre tres concis, direct et atomique, proche d'une fiche ToS;DR: un grade global et une liste de points courts et clairs."
 	userPrompt := fmt.Sprintf(
-		"Analyse en francais la page suivante pour un utilisateur final.\nDomaine demande: %s\nURL de la page retenue: %s\nMethode de collecte: %s\n\nContenu principal a analyser:\n%s\n\nContexte issu de la recherche web:\n%s\n\nFournis une note globale A-E, un resume clair, les points majeurs, les risques, une recommandation utilisateur, un niveau de confiance et un booleen is_contestable.\nRegles:\n- Ne mentionne jamais TOSAI.\n- is_contestable doit etre false par defaut.\n- Mets is_contestable a true uniquement si tu n'es pas suffisamment certain de la veracite ou de la fiabilite de ton analyse: page possiblement non officielle, contenu trop incomplet, contradictions majeures, ou confiance faible.\n- Si tu es raisonnablement sur de toi, is_contestable doit etre false.",
+		"Analyse en francais la page suivante pour un utilisateur final.\nDomaine demande: %s\nURL de la page retenue: %s\nMethode de collecte: %s\n\nContenu principal a analyser:\n%s\n\nContexte issu de la recherche web:\n%s\n\nFournis:\n- service_name: nom court du service\n- rating: note globale A-E\n- summary: 1 a 2 phrases maximum, tres courtes\n- points: 8 a 24 points atomiques si le texte le permet, sinon moins\n- recommendation: une phrase courte\n- confidence: low/medium/high\n- is_contestable\n\nRegles pour les points:\n- Chaque point doit etre une affirmation courte, autonome et concrete.\n- category doit etre l'un de blocker, bad, neutral, good.\n- Utilise blocker pour les clauses les plus problematiques ou intrusives.\n- Utilise bad pour les points clairement defavorables.\n- Utilise neutral pour les clauses standard ou contextuelles.\n- Utilise good pour les protections ou engagements favorables.\n- title doit rester bref, idealement une seule phrase courte.\n- details doit etre tres court aussi, et ne sert qu'a justifier le point en une phrase.\n- N'ajoute pas de remplissage ni de repetition.\n- Base-toi uniquement sur des elements raisonnablement soutenus par le texte collecte ou le contexte web.\n\nRegles de confiance:\n- Ne mentionne jamais TOSAI.\n- is_contestable doit etre false par defaut.\n- Mets is_contestable a true uniquement si tu n'es pas suffisamment certain de la veracite ou de la fiabilite de ton analyse: page possiblement non officielle, contenu trop incomplet, contradictions majeures, ou confidence=low.\n- Si tu es raisonnablement sur de toi, is_contestable doit etre false.",
 		normalizedURL,
 		doc.SourceURL,
 		doc.AcquiredVia,
@@ -577,13 +585,39 @@ func (s *analysisService) analyzeWithOpenAI(ctx context.Context, normalizedURL s
 		"type":                 "object",
 		"additionalProperties": false,
 		"properties": map[string]any{
+			"service_name": map[string]any{
+				"type":      "string",
+				"minLength": 2,
+			},
 			"rating": map[string]any{
 				"type": "string",
 				"enum": []string{"A", "B", "C", "D", "E"},
 			},
 			"summary": map[string]any{
 				"type":      "string",
-				"minLength": 20,
+				"minLength": 8,
+			},
+			"points": map[string]any{
+				"type": "array",
+				"items": map[string]any{
+					"type":                 "object",
+					"additionalProperties": false,
+					"properties": map[string]any{
+						"category": map[string]any{
+							"type": "string",
+							"enum": []string{"blocker", "bad", "neutral", "good"},
+						},
+						"title": map[string]any{
+							"type":      "string",
+							"minLength": 5,
+						},
+						"details": map[string]any{
+							"type":      "string",
+							"minLength": 3,
+						},
+					},
+					"required": []string{"category", "title", "details"},
+				},
 			},
 			"highlights": map[string]any{
 				"type":  "array",
@@ -604,7 +638,7 @@ func (s *analysisService) analyzeWithOpenAI(ctx context.Context, normalizedURL s
 				"type": "boolean",
 			},
 		},
-		"required": []string{"rating", "summary", "highlights", "risks", "recommendation", "confidence", "is_contestable"},
+		"required": []string{"service_name", "rating", "summary", "points", "recommendation", "confidence", "is_contestable"},
 	}
 
 	var analysis summaryAnalysis
@@ -617,7 +651,7 @@ func (s *analysisService) analyzeWithOpenAI(ctx context.Context, normalizedURL s
 		nil,
 		"tosai_analysis",
 		analysisSchema,
-		1000,
+		1600,
 		&analysis,
 	)
 	if err != nil {
@@ -929,10 +963,7 @@ func (s *analysisService) buildSuccessResponse(c *gin.Context, sourceURL, model 
 }
 
 func (s *analysisService) isCacheStale(analyzedAt time.Time) bool {
-	if analyzedAt.IsZero() {
-		return true
-	}
-	return time.Since(analyzedAt) > s.cacheMaxAge
+	return isCachedAnalysisStale(analyzedAt, s.cacheMaxAge, time.Now().UTC())
 }
 
 func attachDebugPayload(err error, debugPayload map[string]any) error {
@@ -960,6 +991,10 @@ func attachDetail(err error, key string, value any) error {
 }
 
 func sanitizeAnalysis(input summaryAnalysis) summaryAnalysis {
+	input.ServiceName = strings.TrimSpace(input.ServiceName)
+	if input.ServiceName == "" {
+		input.ServiceName = "Service analyse"
+	}
 	input.Rating = strings.ToUpper(strings.TrimSpace(input.Rating))
 	switch input.Rating {
 	case "A", "B", "C", "D", "E":
@@ -981,8 +1016,9 @@ func sanitizeAnalysis(input summaryAnalysis) summaryAnalysis {
 		input.Confidence = "medium"
 	}
 	input.IsContestable = input.Confidence == "low"
-	input.Highlights = sanitizeList(input.Highlights)
-	input.Risks = sanitizeList(input.Risks)
+	input.Points = sanitizePoints(input.Points)
+	input.Highlights = deriveHighlightsFromPoints(input.Points, input.Highlights)
+	input.Risks = deriveRisksFromPoints(input.Points, input.Risks)
 	return input
 }
 
@@ -1047,6 +1083,79 @@ func sanitizeSources(items []researchSource) []researchSource {
 		}
 	}
 	return cleaned
+}
+
+func sanitizePoints(items []analysisPoint) []analysisPoint {
+	cleaned := make([]analysisPoint, 0, len(items))
+	for _, item := range items {
+		point := analysisPoint{
+			Category: strings.ToLower(strings.TrimSpace(item.Category)),
+			Title:    strings.TrimSpace(item.Title),
+			Details:  strings.TrimSpace(item.Details),
+		}
+
+		switch point.Category {
+		case "blocker", "bad", "neutral", "good":
+		default:
+			point.Category = "neutral"
+		}
+
+		if point.Title == "" {
+			continue
+		}
+		if point.Details == "" {
+			point.Details = point.Title
+		}
+
+		cleaned = append(cleaned, point)
+		if len(cleaned) >= 24 {
+			break
+		}
+	}
+
+	if len(cleaned) == 0 {
+		return []analysisPoint{{
+			Category: "neutral",
+			Title:    "Aucun point exploitable detecte",
+			Details:  "Le texte collecte ne permet pas d'identifier de clauses assez nettes.",
+		}}
+	}
+
+	return cleaned
+}
+
+func deriveHighlightsFromPoints(points []analysisPoint, fallback []string) []string {
+	derived := make([]string, 0, maxListItems)
+	for _, point := range points {
+		if point.Category != "good" {
+			continue
+		}
+		derived = append(derived, point.Title)
+		if len(derived) >= maxListItems {
+			break
+		}
+	}
+	if len(derived) > 0 {
+		return derived
+	}
+	return sanitizeList(fallback)
+}
+
+func deriveRisksFromPoints(points []analysisPoint, fallback []string) []string {
+	derived := make([]string, 0, maxListItems)
+	for _, point := range points {
+		if point.Category != "blocker" && point.Category != "bad" {
+			continue
+		}
+		derived = append(derived, point.Title)
+		if len(derived) >= maxListItems {
+			break
+		}
+	}
+	if len(derived) > 0 {
+		return derived
+	}
+	return sanitizeList(fallback)
 }
 
 func researchToPromptText(research researchResult) string {
