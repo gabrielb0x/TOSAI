@@ -165,26 +165,196 @@ const trackTween = (tween) => {
   return tween
 }
 
+const setupScrolledTopbar = (nav) => {
+  const syncState = () => {
+    nav.classList.toggle('is-scrolled', window.scrollY > 18)
+  }
+
+  syncState()
+  window.addEventListener('scroll', syncState, { passive: true })
+
+  addCleanup(() => {
+    window.removeEventListener('scroll', syncState)
+  })
+}
+
+const setupMagneticTargets = (targets, { xAmount = 10, yAmount = 10, scale = 1.03 } = {}) => {
+  targets.forEach((target) => {
+    if (!(target instanceof HTMLElement)) {
+      return
+    }
+
+    const moveX = gsap.quickTo(target, 'x', { duration: 0.28, ease: 'power3.out' })
+    const moveY = gsap.quickTo(target, 'y', { duration: 0.28, ease: 'power3.out' })
+    const moveScale = gsap.quickTo(target, 'scale', { duration: 0.28, ease: 'power3.out' })
+
+    const handleMove = (event) => {
+      const bounds = target.getBoundingClientRect()
+      const ratioX = ((event.clientX - bounds.left) / bounds.width - 0.5) * 2
+      const ratioY = ((event.clientY - bounds.top) / bounds.height - 0.5) * 2
+
+      moveX(ratioX * xAmount)
+      moveY(ratioY * yAmount)
+      moveScale(scale)
+    }
+
+    const reset = () => {
+      moveX(0)
+      moveY(0)
+      moveScale(1)
+    }
+
+    target.addEventListener('pointermove', handleMove)
+    target.addEventListener('pointerleave', reset)
+    target.addEventListener('pointercancel', reset)
+
+    addCleanup(() => {
+      target.removeEventListener('pointermove', handleMove)
+      target.removeEventListener('pointerleave', reset)
+      target.removeEventListener('pointercancel', reset)
+    })
+  })
+}
+
+const setupTiltSurface = (surface, layerConfigs = []) => {
+  if (!(surface instanceof HTMLElement)) {
+    return
+  }
+
+  const layers = layerConfigs.flatMap(({ selector, depth }) =>
+    [...surface.querySelectorAll(selector)].map((element) => ({ element, depth })),
+  )
+
+  gsap.set(surface, {
+    transformPerspective: 1200,
+    transformOrigin: 'center center',
+  })
+
+  const moveX = gsap.quickTo(surface, 'x', { duration: 0.35, ease: 'power3.out' })
+  const moveY = gsap.quickTo(surface, 'y', { duration: 0.35, ease: 'power3.out' })
+  const rotateX = gsap.quickTo(surface, 'rotationX', { duration: 0.35, ease: 'power3.out' })
+  const rotateY = gsap.quickTo(surface, 'rotationY', { duration: 0.35, ease: 'power3.out' })
+  const scale = gsap.quickTo(surface, 'scale', { duration: 0.35, ease: 'power3.out' })
+
+  const layerTracks = layers.map(({ element, depth }) => ({
+    depth,
+    moveX: gsap.quickTo(element, 'x', { duration: 0.38, ease: 'power3.out' }),
+    moveY: gsap.quickTo(element, 'y', { duration: 0.38, ease: 'power3.out' }),
+    rotate: gsap.quickTo(element, 'rotationZ', { duration: 0.38, ease: 'power3.out' }),
+  }))
+
+  const handleMove = (event) => {
+    const bounds = surface.getBoundingClientRect()
+    const ratioX = ((event.clientX - bounds.left) / bounds.width - 0.5) * 2
+    const ratioY = ((event.clientY - bounds.top) / bounds.height - 0.5) * 2
+
+    moveX(ratioX * 8)
+    moveY(ratioY * 8)
+    rotateY(ratioX * 5)
+    rotateX(ratioY * -5)
+    scale(1.015)
+
+    layerTracks.forEach((track) => {
+      track.moveX(ratioX * 12 * track.depth)
+      track.moveY(ratioY * 10 * track.depth)
+      track.rotate(ratioX * 1.35 * track.depth)
+    })
+  }
+
+  const reset = () => {
+    moveX(0)
+    moveY(0)
+    rotateX(0)
+    rotateY(0)
+    scale(1)
+
+    layerTracks.forEach((track) => {
+      track.moveX(0)
+      track.moveY(0)
+      track.rotate(0)
+    })
+  }
+
+  surface.addEventListener('pointermove', handleMove)
+  surface.addEventListener('pointerleave', reset)
+  surface.addEventListener('pointercancel', reset)
+
+  addCleanup(() => {
+    surface.removeEventListener('pointermove', handleMove)
+    surface.removeEventListener('pointerleave', reset)
+    surface.removeEventListener('pointercancel', reset)
+  })
+}
+
+const startAmbientFloat = (
+  selector,
+  { xPercent = 0, yPercent = -6, rotation = 0, scale = 1, duration = 4.4, stagger = 0.12, delay = 0.9 } = {},
+) => {
+  const targets = [...document.querySelectorAll(selector)]
+
+  if (targets.length === 0) {
+    return
+  }
+
+  const tween = gsap.to(targets, {
+    xPercent,
+    yPercent,
+    rotation,
+    scale,
+    duration,
+    delay,
+    stagger,
+    repeat: -1,
+    yoyo: true,
+    ease: 'sine.inOut',
+  })
+
+  addCleanup(() => tween.kill())
+}
+
 const setupMotion = () => {
   if (prefersReducedMotion()) {
     return
   }
 
+  const route = normalizePath(window.location.pathname)
   const nav = document.querySelector('.nav-shell')
+  const navItems = [...document.querySelectorAll('.nav-links a, .nav-disabled, .menu-toggle')]
   const heroItems = [...document.querySelectorAll('.motion-item')]
   const bubbles = [...document.querySelectorAll('.bubble')]
+  const mesh = document.querySelector('.mesh')
   const sectionItems = [...document.querySelectorAll('[data-animate]')]
   const storyRows = [...document.querySelectorAll('[data-story]')]
   const footer = document.querySelector('.site-footer')
-  const scrollHint = document.querySelector('.scroll-hint')
+  const hero = document.querySelector('.hero-shell')
+  const heroLogo = document.querySelector('.hero-logo')
+  const heroTitle = document.querySelector('.hero-title')
+  const heroSubtitle = document.querySelector('.hero-subtitle')
+  const heroActions = document.querySelector('.hero-actions')
 
   if (nav) {
+    setupScrolledTopbar(nav)
+
     trackTween(
       gsap.from(nav, {
-        y: -16,
+        y: -22,
         autoAlpha: 0,
-        duration: 0.8,
+        scale: 0.97,
+        duration: 0.92,
         ease: 'power3.out',
+      }),
+    )
+  }
+
+  if (navItems.length > 0) {
+    trackTween(
+      gsap.from(navItems, {
+        y: -14,
+        autoAlpha: 0,
+        duration: 0.6,
+        stagger: 0.05,
+        ease: 'power3.out',
+        delay: 0.14,
       }),
     )
   }
@@ -192,12 +362,13 @@ const setupMotion = () => {
   if (heroItems.length > 0) {
     trackTween(
       gsap.from(heroItems, {
-        y: 36,
+        y: 42,
         autoAlpha: 0,
-        duration: 0.95,
-        stagger: 0.08,
+        scale: 0.985,
+        duration: 1.05,
+        stagger: 0.1,
         ease: 'power3.out',
-        delay: 0.04,
+        delay: 0.08,
       }),
     )
   }
@@ -213,10 +384,12 @@ const setupMotion = () => {
     )
   }
 
-  if (scrollHint) {
-    const tween = gsap.to(scrollHint, {
-      y: 6,
-      duration: 1.3,
+  if (mesh) {
+    const tween = gsap.to(mesh, {
+      xPercent: -3,
+      yPercent: 4,
+      scale: 1.06,
+      duration: 18,
       repeat: -1,
       yoyo: true,
       ease: 'sine.inOut',
@@ -230,7 +403,8 @@ const setupMotion = () => {
       x: index === 0 ? 30 : index === 1 ? -24 : 16,
       y: index === 0 ? 18 : index === 1 ? 26 : -14,
       scale: index === 2 ? 1.06 : 0.95,
-      duration: 7 + index * 1.5,
+      opacity: index === 1 ? 0.72 : 0.6,
+      duration: 8 + index * 1.5,
       repeat: -1,
       yoyo: true,
       ease: 'sine.inOut',
@@ -240,57 +414,226 @@ const setupMotion = () => {
   })
 
   sectionItems.forEach((item) => {
+    const targets = item.children.length > 0 ? [...item.children] : [item]
+
     trackTween(
-      gsap.from(item, {
-        y: 44,
+      gsap.from(targets, {
+        y: 46,
         autoAlpha: 0,
-        duration: 0.9,
+        filter: 'blur(10px)',
+        stagger: 0.08,
+        duration: 0.92,
         ease: 'power3.out',
         scrollTrigger: {
           trigger: item,
-          start: 'top 84%',
+          start: 'top 82%',
           once: true,
+        },
+      }),
+    )
+
+    trackTween(
+      gsap.to(item, {
+        yPercent: -4,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: item,
+          start: 'top bottom',
+          end: 'bottom top',
+          scrub: true,
         },
       }),
     )
   })
 
-  storyRows.forEach((row) => {
+  storyRows.forEach((row, index) => {
     const media = row.querySelector('.story-media')
     const copy = row.querySelector('.story-copy')
+    const copyBlocks = copy ? [...copy.children] : []
+    const featureBlocks = [
+      ...row.querySelectorAll(
+        '.stage-badge, .paper-chip, .paper-flag, .risk-pill, .risk-card, .timeline-chip, .timeline-note, .usage-head, .usage-input, .usage-result, .usage-copy',
+      ),
+    ]
+    const lineBlocks = [...row.querySelectorAll('.paper-lines span, .usage-lines span, .timeline-lines span')]
+
+    const timeline = gsap.timeline({
+      scrollTrigger: {
+        trigger: row,
+        start: 'top 78%',
+        once: true,
+      },
+    })
 
     if (media) {
-      trackTween(
-        gsap.from(media, {
-          x: -56,
+      timeline.from(
+        media,
+        {
+          y: 54,
           autoAlpha: 0,
-          duration: 0.95,
+          scale: 0.93,
+          rotateZ: index % 2 === 0 ? -1.4 : 1.4,
+          duration: 1,
           ease: 'power3.out',
+        },
+        0,
+      )
+
+      trackTween(
+        gsap.to(media, {
+          yPercent: index % 2 === 0 ? -5 : 5,
+          ease: 'none',
           scrollTrigger: {
             trigger: row,
-            start: 'top 82%',
-            once: true,
+            start: 'top bottom',
+            end: 'bottom top',
+            scrub: true,
           },
         }),
       )
+
+      setupTiltSurface(media, [
+        {
+          selector: '.stage-badge, .paper-chip, .paper-flag, .timeline-chip, .timeline-note, .usage-head, .usage-grade',
+          depth: 1.1,
+        },
+        {
+          selector: '.risk-pill, .risk-card, .usage-result, .usage-copy',
+          depth: 0.65,
+        },
+        {
+          selector: '.paper-lines span, .usage-lines span, .timeline-lines span, .timeline-track',
+          depth: 0.35,
+        },
+      ])
     }
+
+    if (featureBlocks.length > 0) {
+      timeline.from(
+        featureBlocks,
+        {
+          y: 24,
+          autoAlpha: 0,
+          duration: 0.7,
+          stagger: 0.05,
+          ease: 'power3.out',
+        },
+        0.18,
+      )
+    }
+
+    if (lineBlocks.length > 0) {
+      timeline.from(
+        lineBlocks,
+        {
+          scaleX: 0,
+          autoAlpha: 0,
+          duration: 0.58,
+          stagger: 0.04,
+          transformOrigin: 'left center',
+          ease: 'power2.out',
+        },
+        0.28,
+      )
+    }
+
+    if (copyBlocks.length > 0) {
+      timeline.from(
+        copyBlocks,
+        {
+          x: 30,
+          y: 18,
+          autoAlpha: 0,
+          duration: 0.78,
+          stagger: 0.1,
+          ease: 'power3.out',
+        },
+        0.2,
+      )
+    }
+
+    trackTween(timeline)
 
     if (copy) {
       trackTween(
-        gsap.from(copy, {
-          x: 42,
-          autoAlpha: 0,
-          duration: 0.95,
-          ease: 'power3.out',
+        gsap.to(copy, {
+          yPercent: index % 2 === 0 ? 4 : -4,
+          ease: 'none',
           scrollTrigger: {
             trigger: row,
-            start: 'top 82%',
-            once: true,
+            start: 'top bottom',
+            end: 'bottom top',
+            scrub: true,
           },
         }),
       )
     }
   })
+
+  setupMagneticTargets([...document.querySelectorAll('.btn, .nav-links a, .brand, .status-link, .menu-toggle')], {
+    xAmount: 8,
+    yAmount: 8,
+    scale: 1.025,
+  })
+
+  if (route === ROUTES.home && hero) {
+    if (heroLogo) {
+      const tween = gsap.to(heroLogo, {
+        y: -12,
+        rotation: -5,
+        duration: 4.8,
+        repeat: -1,
+        yoyo: true,
+        delay: 1,
+        ease: 'sine.inOut',
+      })
+
+      addCleanup(() => tween.kill())
+    }
+
+    ;[
+      [heroLogo, -18],
+      [heroTitle, -14],
+      [heroSubtitle, -9],
+      [heroActions, -6],
+    ].forEach(([target, yPercent]) => {
+      if (!(target instanceof HTMLElement)) {
+        return
+      }
+
+      trackTween(
+        gsap.to(target, {
+          yPercent,
+          ease: 'none',
+          scrollTrigger: {
+            trigger: hero,
+            start: 'top top',
+            end: 'bottom top',
+            scrub: true,
+          },
+        }),
+      )
+    })
+
+    startAmbientFloat('.stage-badge, .paper-chip, .paper-flag, .timeline-chip, .timeline-note, .usage-head', {
+      yPercent: -7,
+      rotation: -1.5,
+      duration: 4.4,
+      delay: 1.15,
+    })
+    startAmbientFloat('.risk-pill', {
+      yPercent: -5,
+      duration: 3.4,
+      stagger: 0.08,
+      delay: 1.2,
+    })
+    startAmbientFloat('.usage-grade', {
+      yPercent: -6,
+      scale: 1.05,
+      duration: 3,
+      delay: 1.3,
+    })
+  }
 
   ScrollTrigger.refresh()
 }
