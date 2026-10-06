@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <title>TOSAI - Promo 15s</title>
+    <link rel="stylesheet" href="scene.css" />
+  </head>
+  <body>
+    <div id="stage">
+      <div class="bg">
+        <span class="bubble b-blue"></span>
+        <span class="bubble b-yellow"></span>
+        <span class="bubble b-green"></span>
+        <span class="bubble b-red"></span>
+        <span class="dots"></span>
+      </div>
+
+      <div id="camera">
+        <div id="s1">
+          <div class="wall"><div class="wall-inner" id="wall"></div></div>
+          <div class="wall-fade"></div>
+          <h1 class="s1-title">
+            <span class="mask"><span class="line" id="s1-l1">Personne ne lit</span></span>
+            <span class="mask"><span class="line" id="s1-l2">les <em>CGU.</em></span></span>
+            <svg class="scribble" viewBox="0 0 520 60" preserveAspectRatio="none">
+              <path id="scribble" d="M8 38 C 110 18, 260 52, 360 30 S 480 22, 512 34" />
+            </svg>
+          </h1>
+          <div class="chip chip-time" id="chip-time">
+            <svg viewBox="0 0 24 24" class="clock">
+              <circle cx="12" cy="12" r="9.5" />
+              <line x1="12" y1="12" x2="12" y2="6.5" id="clock-hand" />
+            </svg>
+            <span>18 min de lecture</span>
+          </div>
+        </div>
+
+        <span id="dot"></span>
+        <svg id="burst" viewBox="-400 -400 800 800">
+          <circle r="0" class="ring r-blue" />
+          <circle r="0" class="ring r-yellow" />
+          <circle r="0" class="ring r-green" />
+          <circle r="0" class="ring r-red" />
+        </svg>
+
+        <div id="brand">
+          <img id="logo" src="assets/logo.png" alt="" />
+          <span class="wordmark-mask"><span id="wordmark">TOSAI</span></span>
+        </div>
+        <p id="tagline">
+          <span class="w">Les</span> <span class="w">CGU,</span> <span class="w">lues</span>
+          <span class="w">par</span> <span class="w">l'IA.</span>
+          <span class="w accent">Pour</span> <span class="w accent">toi.</span>
+        </p>
+
+        <div id="demo">
+          <div class="steps" id="steps">
+            <span class="step-indicator" id="step-indicator"></span>
+            <div class="step" id="step-1"><b>1</b><span>Colle un lien</span></div>
+            <div class="step" id="step-2"><b>2</b><span>Clique</span></div>
+            <div class="step" id="step-3"><b>3</b><span>C'est compris</span></div>
+          </div>
+
+          <div class="search" id="search">
+            <svg viewBox="0 0 24 24" class="link-icon">
+              <path d="M10 14a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.5 1.5" />
+              <path d="M14 10a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.5-1.5" />
+            </svg>
+            <div class="input">
+              <span class="placeholder" id="placeholder">Colle le lien des CGU…</span>
+              <span class="url" id="url"><span class="sel" id="url-sel"></span>example.com/cgu</span>
+              <span class="caret" id="caret"></span>
+            </div>
+            <div class="btn" id="btn">
+              <span class="btn-label" id="btn-label">Analyser</span>
+              <svg class="spinner" id="spinner" viewBox="0 0 50 50"><circle cx="25" cy="25" r="18" /></svg>
+              <svg class="check" id="btn-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+              <span class="ripple" id="ripple"></span>
+            </div>
+            <span class="progress"><span id="progress-bar"></span></span>
+          </div>
+
+          <div class="status" id="status">
+            <span class="status-item" id="status-1">Lecture des CGU…</span>
+            <span class="status-item" id="status-2">Détection des risques…</span>
+            <span class="status-item is-done" id="status-3">
+              <svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>Résumé prêt
+            </span>
+          </div>
+
+          <div class="keys" id="keys">
+            <kbd id="key-ctrl">Ctrl</kbd><i>+</i><kbd id="key-v">V</kbd>
+          </div>
+
+          <div class="result" id="result">
+            <div class="grade-col">
+              <span class="label">Note globale</span>
+              <div class="grade">
+                <svg viewBox="0 0 240 240">
+                  <circle cx="120" cy="120" r="104" class="track" />
+                  <circle cx="120" cy="120" r="104" class="arc" id="grade-arc" />
+                </svg>
+                <span id="grade-letter">B</span>
+              </div>
+            </div>
+            <div class="info-col">
+              <div class="service">
+                <strong>example.com</strong>
+                <span class="pill-time" id="pill-time">
+                  <svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+                  Analysé par l'IA
+                </span>
+              </div>
+              <p class="summary" id="summary">
+                Plutôt correct&nbsp;: tes données restent à toi, mais deux clauses méritent ton
+                attention avant d'accepter.
+              </p>
+              <ul class="points">
+                <li class="point is-good"><span class="badge">Bon</span>Suppression du compte à tout moment</li>
+                <li class="point is-warn"><span class="badge">Attention</span>Données partagées avec des partenaires</li>
+                <li class="point is-bad"><span class="badge">Risque</span>CGU modifiables sans préavis</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="cursor" id="cursor">
+            <span class="click-ring" id="click-ring"></span>
+            <svg viewBox="0 0 32 32">
+              <path d="M6 3.5 L6 25 L11.4 19.9 L15 28 L19 26.3 L15.4 18.4 L22.8 18.4 Z" />
+            </svg>
+          </div>
+        </div>
+
+        <div id="words">
+          <span class="word w-blue">Colle.</span>
+          <span class="word w-amber">Clique.</span>
+          <span class="word w-green">Compris.</span>
+        </div>
+
+        <div id="outro">
+          <div class="outro-brand">
+            <img id="outro-logo" src="assets/logo.png" alt="" />
+            <span class="wordmark-mask"><span id="outro-wordmark">TOSAI</span></span>
+          </div>
+          <p id="outro-line">Comprends ce que tu acceptes. En quelques secondes.</p>
+          <div class="cta" id="cta">
+            tosai.fr
+            <svg id="cta-arrow" viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6" /></svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="grain"></div>
+    </div>
+
+    <script src="node_modules/gsap/dist/gsap.min.js"></script>
+    <script src="scene.js"></script>
+  </body>
+</html>

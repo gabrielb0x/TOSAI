@@ -1,0 +1,15 @@
+{
+  "name": "tosai-promo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "preview": "node render.mjs --preview",
+    "render": "node render.mjs"
+  },
+  "dependencies": {
+    "gsap": "^3.14.2"
+  },
+  "devDependencies": {
+    "playwright": "^1.56.1"
+  }
+}

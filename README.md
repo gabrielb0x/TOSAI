@@ -1,5 +1,7 @@
 # 🚀 TOSAI
 
+[![TOSAI en 15 secondes](promo/tosai-promo.gif)](promo/tosai-promo.mp4)
+
 **TOSAI** est une plateforme pour **analyser des CGU/ToS avec l'IA** et obtenir rapidement:
 - **une note globale (A→E)**
 - **un resume clair**
@@ -39,6 +41,7 @@ Le frontend est maintenant organise en 2 pages:
 - `backend/README.MD` → guide de mise en place du backend, DB et service systemd
 - `frontend/` → application web (vitrine + `/tosai`)
 - `nginx.example.conf` → configuration NGINX de reference
+- `promo/` → video de presentation 15 s (`tosai-promo.mp4`) et son code d'animation
 - `Makefile` → commandes rapides (`setup`, `dev-backend`, `dev-frontend`, `test`)
 
 ---
