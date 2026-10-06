@@ -67,40 +67,39 @@ body {
 .bubble {
   position: absolute;
   border-radius: 50%;
-  filter: blur(110px);
-  opacity: 0.55;
+  opacity: 0.85;
 }
 
 .b-blue {
-  width: 900px;
-  height: 900px;
-  left: -260px;
-  top: -340px;
-  background: rgba(66, 133, 244, 0.55);
+  width: 1200px;
+  height: 1200px;
+  left: -410px;
+  top: -490px;
+  background: radial-gradient(closest-side, rgba(66, 133, 244, 0.55) 0%, rgba(66, 133, 244, 0) 100%);
 }
 
 .b-yellow {
-  width: 720px;
-  height: 720px;
-  right: -200px;
-  top: -260px;
-  background: rgba(251, 188, 5, 0.5);
+  width: 1000px;
+  height: 1000px;
+  right: -340px;
+  top: -400px;
+  background: radial-gradient(closest-side, rgba(251, 188, 5, 0.5) 0%, rgba(251, 188, 5, 0) 100%);
 }
 
 .b-green {
-  width: 780px;
-  height: 780px;
-  right: -180px;
-  bottom: -400px;
-  background: rgba(52, 168, 83, 0.42);
+  width: 1060px;
+  height: 1060px;
+  right: -320px;
+  bottom: -540px;
+  background: radial-gradient(closest-side, rgba(52, 168, 83, 0.42) 0%, rgba(52, 168, 83, 0) 100%);
 }
 
 .b-red {
-  width: 520px;
-  height: 520px;
-  left: 120px;
-  bottom: -380px;
-  background: rgba(234, 67, 53, 0.28);
+  width: 800px;
+  height: 800px;
+  left: -20px;
+  bottom: -520px;
+  background: radial-gradient(closest-side, rgba(234, 67, 53, 0.28) 0%, rgba(234, 67, 53, 0) 100%);
 }
 
 .dots {
@@ -113,6 +112,7 @@ body {
 }
 
 .grain {
+  display: none;
   position: absolute;
   inset: 0;
   pointer-events: none;
