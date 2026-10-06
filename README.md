@@ -1,5 +1,7 @@
 # 🚀 TOSAI
 
+[![TOSAI en 15 secondes](promo/tosai-promo.gif)](promo/tosai-promo.mp4)
+
 **TOSAI** est une plateforme pour **analyser des CGU/ToS avec l'IA** et obtenir rapidement:
 - **une note globale (A→E)**
 - **un resume clair**

@@ -1,6 +1,6 @@
 # 🎬 Promo TOSAI (15 s)
 
-Vidéo motion design 1920x1080 / 60 fps : `tosai-promo.mp4`.
+Vidéo motion design 1920x1080 / 60 fps : `tosai-promo.mp4` (aperçu GIF : `tosai-promo.gif`).
 
 La vidéo n'est pas montée dans un logiciel : c'est une page HTML animée avec
 **GSAP**, filmée image par image par Chromium (Playwright) puis encodée avec
@@ -40,8 +40,21 @@ npm run render                     # → tosai-promo.mp4
 ```
 
 Options de `render.mjs` : `--fps 30`, `--blur 1` (sans flou de mouvement, 2x plus
-rapide), `--blur 4` (flou plus marqué), `--out autre.mp4`. Si tu as déjà un
-Chrome/Chromium : `CHROMIUM_PATH=/chemin/chrome npm run render`.
+rapide), `--blur 4` (flou plus marqué), `--out autre.mp4`, `--workers 3` (nombre de
+Chromium en parallèle, par défaut nb de cœurs - 1), `--keep-frames` (garde les PNG
+dans `frames/video/`). Si tu as déjà un Chrome/Chromium :
+`CHROMIUM_PATH=/chemin/chrome npm run render`.
+
+## Aperçu GIF du README
+
+GitHub ne lit pas un mp4 du repo directement dans un README, donc le README affiche
+`tosai-promo.gif` (cliquable vers le mp4). Pour le regénérer après un nouveau rendu
+(il faut aussi `gifsicle`) :
+
+```bash
+ffmpeg -i tosai-promo.mp4 -filter_complex "fps=12,scale=800:-1:flags=lanczos,hqdn3d=4:4:8:8,split[a][b];[a]palettegen=stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle" -loop 0 tmp.gif
+gifsicle -O3 --lossy=80 tmp.gif -o tosai-promo.gif && rm tmp.gif
+```
 
 ## Modifier
 

@@ -1,10 +1,3 @@
-/*
- * Promo TOSAI - 15 s, 1920x1080.
- * Tout est pilote par UNE timeline GSAP en pause (`tl`) : le rendu video
- * appelle window.__seek(t) image par image, la preview la joue en temps reel.
- * Pour modifier le montage : chaque scene a ses temps en secondes (2e argument
- * des tl.to / tl.fromTo), il suffit de les decaler.
- */
 ;(async () => {
   const DURATION = 15
   const params = new URLSearchParams(location.search)
@@ -16,7 +9,6 @@
   await document.fonts.ready
   await Promise.all($$('img').map((img) => img.decode().catch(() => {})))
 
-  // ---------- Mur de CGU (scene 1) ----------
   const clauses = [
     "L'Utilisateur reconnait avoir pris connaissance des presentes Conditions et les accepter sans reserve.",
     'La Societe se reserve le droit de modifier a tout moment et sans preavis tout ou partie des presentes.',
@@ -38,13 +30,11 @@
   wallScroll.innerHTML = html
   $('#wall').appendChild(wallScroll)
 
-  // Les 3 mots de fin doivent tenir dans le cadre, meme si on change le texte
   const wordsRow = $('#words')
   while (wordsRow.offsetWidth > 1500) {
     wordsRow.style.fontSize = `${parseFloat(getComputedStyle(wordsRow).fontSize) - 2}px`
   }
 
-  // ---------- Mesures (avant toute transformation) ----------
   const rect = (el) => el.getBoundingClientRect()
 
   const title = $('.s1-title')
@@ -71,7 +61,6 @@
 
   const words = $$('.word')
   const wordsW = wordsRow.offsetWidth
-  // Decalage pour garder centres les mots deja affiches
   const wordShift = words.map((w) => (wordsW - (w.offsetLeft + w.offsetWidth)) / 2)
 
   const urlW = $('#url').offsetWidth
@@ -89,7 +78,6 @@
     y: outroLogoR.top + outroLogoR.height / 2,
   }
 
-  // ---------- Etats initiaux ----------
   const arc = $('#grade-arc')
   const ARC_LEN = 2 * Math.PI * 104
   const scribblePath = $('#scribble')
@@ -135,16 +123,13 @@
   gsap.set('#outro-line', { y: 36, opacity: 0, filter: 'blur(10px)' })
   gsap.set('#cta', { scale: 0.7, opacity: 0, y: 20 })
 
-  // ---------- Timeline ----------
   const tl = gsap.timeline({ paused: true, defaults: { ease: 'expo.out' } })
 
-  // Fond qui respire en continu
   tl.to('.b-blue', { x: 260, y: 120, scale: 1.15, duration: DURATION, ease: 'sine.inOut' }, 0)
   tl.to('.b-yellow', { x: -220, y: 160, scale: 0.9, duration: DURATION, ease: 'sine.inOut' }, 0)
   tl.to('.b-green', { x: -300, y: -140, scale: 1.2, duration: DURATION, ease: 'sine.inOut' }, 0)
   tl.to('.b-red', { x: 380, y: -60, duration: DURATION, ease: 'sine.inOut' }, 0)
 
-  // Camera
   tl.to('#camera', { scale: 1.07, rotation: -0.6, duration: 2.45, ease: 'power1.in' }, 0)
   tl.set('#camera', { scale: 1.16, rotation: 0 }, 2.45)
   tl.to('#camera', { scale: 1, duration: 1.8 }, 2.45)
@@ -155,7 +140,6 @@
   tl.to('#camera', { scale: 1, duration: 1.6 }, 12.9)
   tl.to('#camera', { scale: 1.025, duration: 1.5, ease: 'sine.inOut' }, 14.5)
 
-  // ===== SCENE 1 : personne ne lit les CGU (0 -> 2.5) =====
   tl.to('.wall', { opacity: 1, duration: 0.7, ease: 'power2.out' }, 0)
   tl.fromTo(wallScroll, { y: 0 }, { y: -1500, duration: 2.5, ease: 'power1.in' }, 0)
   tl.to('#s1-l1', { yPercent: 0, rotation: 0, duration: 0.95 }, 0.08)
@@ -173,7 +157,6 @@
   tl.to('#dot', { scale: 1, duration: 0.18, ease: 'power4.out' }, 2.3)
   tl.to('#dot', { scale: 0, duration: 0.2, ease: 'power3.in' }, 2.45)
 
-  // ===== SCENE 2 : logo (2.5 -> 4.3) =====
   const burst = (at, radius) => {
     rings.forEach((ring, i) => {
       tl.fromTo(
@@ -191,7 +174,6 @@
   tl.to(taglineWords, { y: 0, opacity: 1, filter: 'blur(0px)', duration: 0.75, stagger: 0.045 }, 3.35)
   tl.to(taglineWords, { y: -36, opacity: 0, filter: 'blur(10px)', duration: 0.4, ease: 'power3.in', stagger: 0.025 }, 4.2)
 
-  // Le logo file en haut a gauche, comme la navbar du site
   const navScale = 0.3
   tl.to(
     brand,
@@ -205,22 +187,18 @@
     4.3,
   )
 
-  // ===== SCENE 3 : la demo (4.5 -> 11) =====
-  // Indicateur noir qui glisse d'une etape a l'autre (comme un segmented control)
   const activate = (i, at) => {
     if (i === 0) {
       tl.to('#step-indicator', { scale: 1, duration: 0.6 }, at)
     } else {
       tl.to('#step-indicator', { ...stepBoxes[i], duration: 0.65, ease: 'expo.inOut' }, at)
     }
-    // Le texte passe en blanc quand l'indicateur arrive dessous
     const sel = `#step-${i + 1}`
     const textAt = at + (i === 0 ? 0.1 : 0.34)
     tl.to(sel, { color: '#ffffff', duration: 0.15, ease: 'none' }, textAt)
     tl.to(`${sel} b`, { backgroundColor: '#ffffff', color: '#11131a', duration: 0.15, ease: 'none' }, textAt)
   }
   const done = (i, at) => {
-    // ... et repasse en noir quand il s'en va
     const sel = `#step-${i + 1}`
     tl.to(`${sel} b`, { backgroundColor: '#34a853', color: '#ffffff', duration: 0.3, ease: 'none' }, at)
     tl.to(sel, { color: '#11131a', duration: 0.12, ease: 'none' }, at + 0.27)
@@ -237,7 +215,6 @@
   tl.to('#search', { y: 0, scale: 1, opacity: 1, duration: 1.05 }, 4.7)
   activate(0, 5.2)
 
-  // 1. Colle un lien
   tl.set('#cursor', { opacity: 1 }, 4.85)
   cursorTo(inputPoint, 4.85, 0.72)
   click(5.57)
@@ -251,7 +228,6 @@
   tl.set('#caret', { x: urlW + 8 }, 6.2)
   tl.to('#keys', { y: 16, opacity: 0, duration: 0.35, ease: 'power2.in' }, 6.6)
 
-  // 2. Clique
   done(0, 6.65)
   activate(1, 6.65)
   cursorTo(btnPoint, 6.62, 0.62)
@@ -263,7 +239,6 @@
   tl.fromTo('#spinner', { opacity: 0, scale: 0.5 }, { opacity: 1, scale: 1, duration: 0.35, ease: 'back.out(2)', immediateRender: false }, 7.42)
   tl.to('#spinner', { rotation: 1100, duration: 1.15, ease: 'none' }, 7.3)
   tl.to('#progress-bar', { scaleX: 1, duration: 1.1, ease: 'power2.inOut' }, 7.28)
-  // Ticker de statut : chaque message pousse le precedent vers le haut
   ;['#status-1', '#status-2', '#status-3'].forEach((sel, i) => {
     const at = 7.3 + i * 0.4
     tl.to(sel, { yPercent: 0, duration: 0.45, ease: 'expo.inOut' }, at)
@@ -273,7 +248,6 @@
   tl.to('#btn-check', { opacity: 1, scale: 1, duration: 0.5, ease: 'back.out(2.6)' }, 8.42)
   tl.to('#cursor', { opacity: 0, y: '+=40', duration: 0.35, ease: 'power2.in' }, 8.42)
 
-  // 3. C'est compris
   done(1, 8.5)
   activate(2, 8.5)
   tl.to('.progress', { opacity: 0, duration: 0.3, ease: 'none' }, 8.5)
@@ -287,12 +261,10 @@
   tl.to(points, { x: 0, opacity: 1, duration: 0.8, stagger: 0.12 }, 9.2)
   tl.to('#pill-time', { scale: 1, opacity: 1, duration: 0.6, ease: 'back.out(2.4)' }, 9.75)
 
-  // Sortie de la demo
   tl.to(['#result', '#search'], { y: '-=90', opacity: 0, filter: 'blur(8px)', duration: 0.45, ease: 'expo.in', stagger: 0.05 }, 10.82)
   tl.to('#steps', { y: -30, opacity: 0, duration: 0.4, ease: 'expo.in' }, 10.8)
   tl.to(brand, { opacity: 0, duration: 0.35, ease: 'power2.in' }, 10.85)
 
-  // ===== SCENE 4 : Colle. Clique. Compris. (11.2 -> 12.9) =====
   gsap.set(wordsRow, { x: wordShift[0] })
   words.forEach((word, i) => {
     const at = 11.22 + i * 0.3
@@ -301,7 +273,6 @@
   })
   tl.to(words, { y: -70, opacity: 0, filter: 'blur(14px)', duration: 0.45, ease: 'expo.in', stagger: 0.05 }, 12.55)
 
-  // ===== OUTRO (12.9 -> 15) =====
   tl.set('#burst', { x: outroLogoCenter.x - 960, y: outroLogoCenter.y - 540 }, 12.85)
   burst(12.9, 230)
   tl.to('#outro-logo', { scale: 1, rotation: 0, duration: 1.0, ease: 'back.out(1.6)' }, 12.92)
@@ -314,7 +285,6 @@
 
   tl.set({}, {}, DURATION)
 
-  // ---------- Elements proceduraux (dependent seulement du temps) ----------
   const caret = $('#caret')
   const procedural = (t) => {
     const on = t >= 5.6 && t < 7.26

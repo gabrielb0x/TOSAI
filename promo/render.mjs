@@ -1,10 +1,3 @@
-// Rendu de la promo TOSAI.
-//   node render.mjs                 -> tosai-promo.mp4 (1920x1080, 60 fps)
-//   node render.mjs --preview       -> sert la scene sur http://localhost:4173 (lecture temps reel)
-//   node render.mjs --still 1,5.5,9 -> captures PNG dans frames/ pour verifier un instant precis
-// Options : --fps 60, --blur 2 (sous-images moyennees = flou de mouvement), --out fichier.mp4,
-//           --workers 3 (nb de Chromium en parallele, defaut = nb de coeurs - 1), --keep-frames
-// Chromium : celui de Playwright, ou CHROMIUM_PATH=/chemin/vers/chrome.
 import { createServer } from 'node:http'
 import { readFile, mkdir, writeFile, rm } from 'node:fs/promises'
 import { cpus } from 'node:os'
@@ -43,7 +36,6 @@ const port = Number(opt('port', 4173))
 await new Promise((resolve) => server.listen(port, resolve))
 const base = `http://localhost:${port}/scene.html`
 
-// Ouvre un Chromium avec la scene chargee, pret a etre "filme"
 const openScene = async () => {
   const browser = await chromium.launch({
     executablePath: process.env.CHROMIUM_PATH || undefined,
@@ -88,7 +80,6 @@ if (args.includes('--preview')) {
   await rm(dir, { recursive: true, force: true })
   await mkdir(dir, { recursive: true })
 
-  // 1) Captures : plusieurs Chromium en parallele, chacun prend la prochaine image libre
   const scenes = await Promise.all(Array.from({ length: workers }, openScene))
   const total = Math.round(scenes[0].duration * fps * blur)
   const started = Date.now()
@@ -110,7 +101,6 @@ if (args.includes('--preview')) {
   await Promise.all(scenes.map(({ browser }) => browser.close()))
   server.close()
 
-  // 2) Encodage : moyenne des sous-images (flou de mouvement) puis H.264
   console.log('\nEncodage...')
   await new Promise((resolve, reject) => {
     const ffmpeg = spawn(
